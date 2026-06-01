@@ -14,6 +14,8 @@ interface Anexo10TableProps {
   onChange: (entries: DailyEntry[]) => void;
   footer: { revisadoPor: string; cargo: string; fecha: string };
   onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
+  lockedDays: Set<number>;
+  onLockedDaysChange: (locked: Set<number>) => void;
 }
 
 function cellCls(outOfRange: boolean) {
@@ -30,10 +32,24 @@ function rowAlert(e: DailyEntry): boolean {
   return tM || tT || hM || hT || tP || hP;
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange }: Anexo10TableProps) {
   const update = (i: number, field: keyof DailyEntry, val: string) => {
     const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
     onChange(next);
+  };
+
+  const toggleLock = (dia: number) => {
+    const isLocked = lockedDays.has(dia);
+    if (isLocked) {
+      if (!window.confirm('¿Deseas editar este día?')) return;
+      const next = new Set(lockedDays);
+      next.delete(dia);
+      onLockedDaysChange(next);
+    } else {
+      const next = new Set(lockedDays);
+      next.add(dia);
+      onLockedDaysChange(next);
+    }
   };
 
   const inputCls = 'w-full bg-transparent text-center text-sm focus:outline-none focus:bg-blue-50 rounded px-1 py-0.5';
@@ -56,9 +72,10 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange }: Anex
       <div className="flex items-center gap-4 mb-2 text-xs text-gray-600 no-print">
         <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block"></span> Fuera de rango</span>
         <span>Temp MÁX: <strong>30°C</strong> · Humedad MÁX: <strong>70%</strong></span>
+        <span className="inline-flex items-center gap-1 ml-4"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Día confirmado</span>
       </div>
 
-      <table className="w-full border-collapse text-sm min-w-[900px]">
+      <table className="w-full border-collapse text-sm min-w-[960px]">
         <thead>
           <tr>
             <th className={thCls} rowSpan={2}>DÍA</th>
@@ -66,6 +83,7 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange }: Anex
             <th className={thCls} colSpan={3}>HUMEDAD (%) — MÁX 70%</th>
             <th className={thCls} rowSpan={2}>NOMBRE / FIRMA<br/>RESPONSABLE</th>
             <th className={thCls} rowSpan={2}>OBSERVACIONES</th>
+            <th className={`${thCls} no-print`} rowSpan={2}>✓</th>
           </tr>
           <tr>
             <th className={thCls}>MAÑANA</th>
@@ -81,39 +99,79 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange }: Anex
             const tProm = calcProm(e.tempManana, e.tempTarde);
             const hProm = calcProm(e.humManana, e.humTarde);
             const alert = rowAlert(e);
-            const rowBg = alert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-blue-50/30';
+            const locked = lockedDays.has(e.dia);
+            const rowBg = locked
+              ? 'bg-gray-50'
+              : alert
+              ? 'bg-red-50'
+              : i % 2 === 0
+              ? 'bg-white'
+              : 'bg-blue-50/30';
             return (
               <tr key={e.dia} className={rowBg}>
                 <td className={`${tdCls} text-center font-medium text-blue-800 w-10`}>{e.dia}</td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e.tempManana))} w-20`}>
-                  <input className={inputCls} type="number" step="0.1" value={e.tempManana}
-                    onChange={ev => update(i, 'tempManana', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-center text-sm px-1">{e.tempManana}</span>
+                  ) : (
+                    <input className={inputCls} type="number" step="0.1" value={e.tempManana}
+                      onChange={ev => update(i, 'tempManana', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e.tempTarde))} w-20`}>
-                  <input className={inputCls} type="number" step="0.1" value={e.tempTarde}
-                    onChange={ev => update(i, 'tempTarde', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-center text-sm px-1">{e.tempTarde}</span>
+                  ) : (
+                    <input className={inputCls} type="number" step="0.1" value={e.tempTarde}
+                      onChange={ev => update(i, 'tempTarde', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(tProm))} w-20 text-center text-gray-700`}>
                   {tProm}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(e.humManana))} w-20`}>
-                  <input className={inputCls} type="number" step="0.1" value={e.humManana}
-                    onChange={ev => update(i, 'humManana', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-center text-sm px-1">{e.humManana}</span>
+                  ) : (
+                    <input className={inputCls} type="number" step="0.1" value={e.humManana}
+                      onChange={ev => update(i, 'humManana', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(e.humTarde))} w-20`}>
-                  <input className={inputCls} type="number" step="0.1" value={e.humTarde}
-                    onChange={ev => update(i, 'humTarde', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-center text-sm px-1">{e.humTarde}</span>
+                  ) : (
+                    <input className={inputCls} type="number" step="0.1" value={e.humTarde}
+                      onChange={ev => update(i, 'humTarde', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(hProm))} w-20 text-center text-gray-700`}>
                   {hProm}
                 </td>
                 <td className={`${tdCls}`}>
-                  <input className={textInputCls} value={e.nombre}
-                    onChange={ev => update(i, 'nombre', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-sm px-1">{e.nombre}</span>
+                  ) : (
+                    <input className={textInputCls} value={e.nombre}
+                      onChange={ev => update(i, 'nombre', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls}`}>
-                  <input className={textInputCls} value={e.observaciones}
-                    onChange={ev => update(i, 'observaciones', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-sm px-1">{e.observaciones}</span>
+                  ) : (
+                    <input className={textInputCls} value={e.observaciones}
+                      onChange={ev => update(i, 'observaciones', ev.target.value)} />
+                  )}
+                </td>
+                <td className={`${tdCls} text-center no-print w-10`}>
+                  <button
+                    onClick={() => toggleLock(e.dia)}
+                    title={locked ? 'Clic para editar' : 'Confirmar día'}
+                    className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-green-600'}`}
+                  >
+                    {locked ? '🔒' : '✓'}
+                  </button>
                 </td>
               </tr>
             );
@@ -130,6 +188,7 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange }: Anex
             <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumP))}`}>{avgHumP}</td>
             <td className={tdCls}></td>
             <td className={tdCls}></td>
+            <td className={`${tdCls} no-print`}></td>
           </tr>
         </tfoot>
       </table>
@@ -161,6 +220,8 @@ interface Anexo11TableProps {
   onChange: (entries: RefrigDailyEntry[]) => void;
   footer: { revisadoPor: string; cargo: string; fecha: string };
   onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
+  lockedDays: Set<number>;
+  onLockedDaysChange: (locked: Set<number>) => void;
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -171,10 +232,24 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
   );
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange }: Anexo11TableProps) {
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
     const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
     onChange(next);
+  };
+
+  const toggleLock = (dia: number) => {
+    const isLocked = lockedDays.has(dia);
+    if (isLocked) {
+      if (!window.confirm('¿Deseas editar este día?')) return;
+      const next = new Set(lockedDays);
+      next.delete(dia);
+      onLockedDaysChange(next);
+    } else {
+      const next = new Set(lockedDays);
+      next.add(dia);
+      onLockedDaysChange(next);
+    }
   };
 
   const inputCls = 'w-full bg-transparent text-center text-sm focus:outline-none focus:bg-blue-50 rounded px-1 py-0.5';
@@ -192,15 +267,17 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange }: Anex
       <div className="flex items-center gap-4 mb-2 text-xs text-gray-600 no-print">
         <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block"></span> Fuera de rango</span>
         <span>Rango temp: <strong>2–8°C</strong></span>
+        <span className="inline-flex items-center gap-1 ml-4"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Día confirmado</span>
       </div>
 
-      <table className="w-full border-collapse text-sm min-w-[700px]">
+      <table className="w-full border-collapse text-sm min-w-[750px]">
         <thead>
           <tr>
             <th className={thCls} rowSpan={2}>DÍA</th>
             <th className={thCls} colSpan={3}>TEMPERATURA DE REFRIGERACIÓN (°C) — RANGO 2–8°C</th>
             <th className={thCls} rowSpan={2}>NOMBRE / FIRMA<br/>RESPONSABLE</th>
             <th className={thCls} rowSpan={2}>OBSERVACIONES</th>
+            <th className={`${thCls} no-print`} rowSpan={2}>✓</th>
           </tr>
           <tr>
             <th className={thCls}>MAÑANA</th>
@@ -212,28 +289,60 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange }: Anex
           {entries.map((e, i) => {
             const tProm = calcProm(e.tempManana, e.tempTarde);
             const alert = rowAlert11(e);
-            const rowBg = alert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-blue-50/30';
+            const locked = lockedDays.has(e.dia);
+            const rowBg = locked
+              ? 'bg-gray-50'
+              : alert
+              ? 'bg-red-50'
+              : i % 2 === 0
+              ? 'bg-white'
+              : 'bg-blue-50/30';
             return (
               <tr key={e.dia} className={rowBg}>
                 <td className={`${tdCls} text-center font-medium text-blue-800 w-10`}>{e.dia}</td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e.tempManana))} w-24`}>
-                  <input className={inputCls} type="number" step="0.1" value={e.tempManana}
-                    onChange={ev => update(i, 'tempManana', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-center text-sm px-1">{e.tempManana}</span>
+                  ) : (
+                    <input className={inputCls} type="number" step="0.1" value={e.tempManana}
+                      onChange={ev => update(i, 'tempManana', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e.tempTarde))} w-24`}>
-                  <input className={inputCls} type="number" step="0.1" value={e.tempTarde}
-                    onChange={ev => update(i, 'tempTarde', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-center text-sm px-1">{e.tempTarde}</span>
+                  ) : (
+                    <input className={inputCls} type="number" step="0.1" value={e.tempTarde}
+                      onChange={ev => update(i, 'tempTarde', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(tProm))} w-24 text-center text-gray-700`}>
                   {tProm}
                 </td>
                 <td className={`${tdCls}`}>
-                  <input className={textInputCls} value={e.nombre}
-                    onChange={ev => update(i, 'nombre', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-sm px-1">{e.nombre}</span>
+                  ) : (
+                    <input className={textInputCls} value={e.nombre}
+                      onChange={ev => update(i, 'nombre', ev.target.value)} />
+                  )}
                 </td>
                 <td className={`${tdCls}`}>
-                  <input className={textInputCls} value={e.observaciones}
-                    onChange={ev => update(i, 'observaciones', ev.target.value)} />
+                  {locked ? (
+                    <span className="block text-sm px-1">{e.observaciones}</span>
+                  ) : (
+                    <input className={textInputCls} value={e.observaciones}
+                      onChange={ev => update(i, 'observaciones', ev.target.value)} />
+                  )}
+                </td>
+                <td className={`${tdCls} text-center no-print w-10`}>
+                  <button
+                    onClick={() => toggleLock(e.dia)}
+                    title={locked ? 'Clic para editar' : 'Confirmar día'}
+                    className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-green-600'}`}
+                  >
+                    {locked ? '🔒' : '✓'}
+                  </button>
                 </td>
               </tr>
             );
@@ -247,6 +356,7 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange }: Anex
             <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempP))}`}>{avgTempP}</td>
             <td className={tdCls}></td>
             <td className={tdCls}></td>
+            <td className={`${tdCls} no-print`}></td>
           </tr>
         </tfoot>
       </table>

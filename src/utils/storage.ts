@@ -85,4 +85,77 @@ export function saveAnexo11(year: number, month: number, data: Anexo11Data): voi
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+// ─── Locked days ──────────────────────────────────────────────────────────────
+
+export function loadLockedDays(anexo: 'locked10' | 'locked11', year: number, month: number): Set<number> {
+  const key = `${anexo}-${year}-${String(month).padStart(2, '0')}`;
+  const raw = localStorage.getItem(key);
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw) as number[];
+      return new Set(arr);
+    } catch {
+      // fall through
+    }
+  }
+  return new Set();
+}
+
+export function saveLockedDays(anexo: 'locked10' | 'locked11', year: number, month: number, locked: Set<number>): void {
+  const key = `${anexo}-${year}-${String(month).padStart(2, '0')}`;
+  localStorage.setItem(key, JSON.stringify(Array.from(locked)));
+}
+
+// ─── Has data ─────────────────────────────────────────────────────────────────
+
+export function hasDataForMonth(anexo: 'anexo10' | 'anexo11', year: number, month: number): boolean {
+  const key = `${anexo}-${year}-${String(month).padStart(2, '0')}`;
+  return localStorage.getItem(key) !== null;
+}
+
+// ─── Export / Import all data ─────────────────────────────────────────────────
+
+export function exportAllData(): void {
+  const result: Record<string, unknown> = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          result[key] = JSON.parse(raw);
+        } catch {
+          result[key] = raw;
+        }
+      }
+    }
+  }
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `respaldo-rpis-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function importAllData(file: File): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string) as Record<string, unknown>;
+        Object.entries(data).forEach(([key, value]) => {
+          localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+        });
+        resolve();
+      } catch {
+        reject(new Error('Archivo JSON inválido'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Error al leer el archivo'));
+    reader.readAsText(file);
+  });
+}
+
 export { emptyEntries10, emptyEntries11 };
