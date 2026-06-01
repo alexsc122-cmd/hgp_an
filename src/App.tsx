@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { Termohigrometro, Anexo10Data, Anexo11Data, MESES, Usuario } from './types';
 import {
   loadTermos, saveTermos,
@@ -252,6 +253,12 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
   const [loadedKey11, setLoadedKey11] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
 
   const importFileRef = useRef<HTMLInputElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `RPIS_${termo.nombre}_${MESES[selectedMonth - 1]}_${selectedYear}`,
+  });
 
   // Auto-save with debounce
   const debouncedAnexo10 = useDebounce(anexo10, 800);
@@ -388,7 +395,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
         </div>
         {/* Print / PDF button */}
         <button
-          onClick={() => window.print()}
+          onClick={() => handlePrint()}
           className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0 no-print"
           title="Imprimir / Exportar PDF"
         >
@@ -430,7 +437,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           </div>
 
           {isAmbiental ? (
-            <div id="print-area" className="bg-white rounded-xl shadow-md p-6">
+            <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
               <HeaderForm
                 data={anexo10.header}
                 onChange={handleHeader10Change}
@@ -453,7 +460,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
               />
             </div>
           ) : (
-            <div id="print-area" className="bg-white rounded-xl shadow-md p-6">
+            <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
               <HeaderForm
                 data={anexo11.header}
                 onChange={handleHeader11Change}
