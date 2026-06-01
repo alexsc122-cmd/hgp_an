@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Termohigrometro, Anexo10Data, Anexo11Data, MESES } from './types';
+import { Termohigrometro, Anexo10Data, Anexo11Data, MESES, Usuario } from './types';
 import {
   loadTermos, saveTermos,
   loadAnexo10, saveAnexo10,
@@ -7,6 +7,9 @@ import {
   emptyEntries10, emptyEntries11,
   loadLockedDays, saveLockedDays,
   exportAllData, importAllData,
+  loadUsuarios, saveUsuarios,
+  getSession, setSession,
+  initAdminIfNeeded,
 } from './utils/storage';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -14,6 +17,8 @@ import { Anexo10Chart, Anexo11Chart } from './components/TempChart';
 import Sidebar from './components/Sidebar';
 import TermoCard from './components/TermoCard';
 import TermoModal from './components/TermoModal';
+import LoginScreen from './components/LoginScreen';
+import UserModal from './components/UserModal';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -28,70 +33,173 @@ function useDebounce<T>(value: T, delay: number): T {
 
 interface DashboardProps {
   termos: Termohigrometro[];
+  currentUser: Usuario;
   onView: (t: Termohigrometro) => void;
   onAdd: () => void;
   onEdit: (t: Termohigrometro) => void;
   onDelete: (id: string) => void;
+  onLogout: () => void;
 }
 
-function Dashboard({ termos, onView, onAdd, onEdit, onDelete }: DashboardProps) {
+function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
+  const [tab, setTab] = useState<'equipos' | 'usuarios'>('equipos');
+  const [usuarios, setUsuarios] = useState<Usuario[]>(() => loadUsuarios());
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [editUser, setEditUser] = useState<Usuario | null>(null);
+  const isAdmin = currentUser.rol === 'admin';
+
+  const handleSaveUser = (u: Usuario) => {
+    const updated = editUser ? usuarios.map(x => x.id === u.id ? u : x) : [...usuarios, u];
+    saveUsuarios(updated);
+    setUsuarios(updated);
+    setUserModalOpen(false);
+    setEditUser(null);
+  };
+
+  const handleDeleteUser = (id: string) => {
+    if (id === currentUser.id) { alert('No puedes eliminar tu propio usuario.'); return; }
+    if (!confirm('¿Eliminar este usuario?')) return;
+    const updated = usuarios.filter(u => u.id !== id);
+    saveUsuarios(updated);
+    setUsuarios(updated);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
       {/* Nav */}
       <nav className="bg-blue-900 text-white px-6 py-3 flex items-center gap-3 shadow-lg">
         <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">R</div>
-        <div>
+        <div className="flex-1">
           <div className="font-bold text-base leading-tight">RPIS — Control de Temperatura y Humedad</div>
           <div className="text-xs text-blue-200">Almacén Farmacéutico — Ecuador</div>
         </div>
-      </nav>
-
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-blue-900">Equipos registrados</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {termos.length === 0
-                ? 'Sin equipos aún — agrega el primero'
-                : `${termos.length} equipo${termos.length !== 1 ? 's' : ''}`}
-            </p>
+        <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+            <div className="text-xs font-semibold text-white">{currentUser.nombre}</div>
+            <div className="text-xs text-blue-300">{currentUser.rol === 'admin' ? '👑 Administrador' : '👤 Operador'}</div>
           </div>
           <button
-            onClick={onAdd}
-            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+            onClick={onLogout}
+            className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
           >
-            ➕ Agregar equipo
+            Cerrar sesión
           </button>
         </div>
+      </nav>
 
-        {termos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4 text-3xl">🌡️</div>
-            <h2 className="text-lg font-bold text-blue-900 mb-1">No hay equipos registrados</h2>
-            <p className="text-sm text-gray-500 mb-6 max-w-xs">
-              Agrega tu primer termohigrómetro para comenzar a registrar temperatura y humedad.
-            </p>
-            <button
-              onClick={onAdd}
-              className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shadow"
-            >
-              Agregar primer equipo
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {termos.map(t => (
-              <TermoCard
-                key={t.id}
-                termo={t}
-                onView={onView}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
+      {/* Tabs — only admin sees Usuarios tab */}
+      {isAdmin && (
+        <div className="bg-white border-b border-gray-200 px-6">
+          <div className="flex gap-1 max-w-6xl mx-auto">
+            {(['equipos', 'usuarios'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                  tab === t ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {t === 'equipos' ? '🌡️ Equipos' : '👥 Usuarios'}
+              </button>
             ))}
           </div>
+        </div>
+      )}
+
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* ─── Equipos tab ─── */}
+        {tab === 'equipos' && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-blue-900">Equipos registrados</h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {termos.length === 0 ? 'Sin equipos aún' : `${termos.length} equipo${termos.length !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+              {isAdmin && (
+                <button
+                  onClick={onAdd}
+                  className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                >
+                  ➕ Agregar equipo
+                </button>
+              )}
+            </div>
+            {termos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4 text-3xl">🌡️</div>
+                <h2 className="text-lg font-bold text-blue-900 mb-1">No hay equipos registrados</h2>
+                <p className="text-sm text-gray-500 mb-6 max-w-xs">Agrega tu primer termohigrómetro para comenzar.</p>
+                {isAdmin && (
+                  <button onClick={onAdd} className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shadow">
+                    Agregar primer equipo
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {termos.map(t => (
+                  <TermoCard key={t.id} termo={t} onView={onView} onEdit={isAdmin ? onEdit : undefined} onDelete={isAdmin ? onDelete : undefined} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ─── Usuarios tab (admin only) ─── */}
+        {tab === 'usuarios' && isAdmin && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-blue-900">Usuarios del sistema</h1>
+                <p className="text-sm text-gray-500 mt-0.5">{usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''}</p>
+              </div>
+              <button
+                onClick={() => { setEditUser(null); setUserModalOpen(true); }}
+                className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+              >
+                ➕ Nuevo usuario
+              </button>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-blue-50 text-blue-900 text-xs font-semibold uppercase tracking-wide">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Nombre</th>
+                    <th className="px-4 py-3 text-left">Usuario</th>
+                    <th className="px-4 py-3 text-left">Rol</th>
+                    <th className="px-4 py-3 text-left">Creado</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {usuarios.map(u => (
+                    <tr key={u.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{u.nombre}</td>
+                      <td className="px-4 py-3 font-mono text-gray-600">{u.usuario}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {u.rol === 'admin' ? '👑 Admin' : '👤 Operador'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{new Date(u.creadoEn).toLocaleDateString('es-EC')}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => { setEditUser(u); setUserModalOpen(true); }} className="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3">Editar</button>
+                        <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </main>
+
+      {userModalOpen && (
+        <UserModal initial={editUser} onSave={handleSaveUser} onCancel={() => { setUserModalOpen(false); setEditUser(null); }} />
+      )}
     </div>
   );
 }
@@ -100,10 +208,11 @@ function Dashboard({ termos, onView, onAdd, onEdit, onDelete }: DashboardProps) 
 
 interface RegistroScreenProps {
   termo: Termohigrometro;
+  currentUser: Usuario;
   onBack: () => void;
 }
 
-function RegistroScreen({ termo, onBack }: RegistroScreenProps) {
+function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonthNum = now.getMonth() + 1;
@@ -254,18 +363,33 @@ function RegistroScreen({ termo, onBack }: RegistroScreenProps) {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex flex-col">
       {/* Top nav */}
       <nav className="bg-blue-900 text-white px-6 py-3 flex items-center gap-3 shadow-lg no-print z-50 relative">
-        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">R</div>
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0"
+          title="Volver al menú principal"
+        >
+          ← Menú
+        </button>
+        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xs shrink-0">R</div>
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-base leading-tight">RPIS — Control de Temperatura y Humedad</div>
+          <div className="font-bold text-sm leading-tight truncate">
+            {termo.nombre}{termo.numero ? ` · N° ${termo.numero}` : ''}
+          </div>
           <div className="text-xs text-blue-200 truncate">
-            {termo.nombre}
-            {termo.numero ? ` · N° ${termo.numero}` : ''}
-            {' · '}
             <span className={isAmbiental ? 'text-blue-300' : 'text-teal-300'}>
               {isAmbiental ? 'Anexo 10 — Ambiente' : 'Anexo 11 — Refrigeración'}
             </span>
+            {' · '}{currentUser.nombre}
           </div>
         </div>
+        {/* Print / PDF button */}
+        <button
+          onClick={() => window.print()}
+          className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors shrink-0 no-print"
+          title="Imprimir / Exportar PDF"
+        >
+          🖨️ Imprimir
+        </button>
       </nav>
 
       <div className="flex flex-1 relative no-print">
@@ -360,15 +484,25 @@ function RegistroScreen({ termo, onBack }: RegistroScreenProps) {
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
+  // Init default admin on first run
+  initAdminIfNeeded();
+
+  const [currentUser, setCurrentUser] = useState<Usuario | null>(() => getSession());
   const [termos, setTermos] = useState<Termohigrometro[]>(() => loadTermos());
   const [selectedTermo, setSelectedTermo] = useState<Termohigrometro | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Termohigrometro | null>(null);
 
+  const handleLogin = (user: Usuario) => setCurrentUser(user);
+
+  const handleLogout = () => {
+    setSession(null);
+    setCurrentUser(null);
+    setSelectedTermo(null);
+  };
+
   const handleSaveTermo = (t: Termohigrometro) => {
-    const updated = editTarget
-      ? termos.map(x => x.id === t.id ? t : x)
-      : [...termos, t];
+    const updated = editTarget ? termos.map(x => x.id === t.id ? t : x) : [...termos, t];
     saveTermos(updated);
     setTermos(updated);
     setModalOpen(false);
@@ -376,26 +510,21 @@ export default function App() {
   };
 
   const handleDelete = (id: string) => {
+    if (!confirm('¿Eliminar este equipo y todos sus registros?')) return;
     const updated = termos.filter(t => t.id !== id);
     saveTermos(updated);
     setTermos(updated);
   };
 
-  const openAdd = () => {
-    setEditTarget(null);
-    setModalOpen(true);
-  };
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
-  const openEdit = (t: Termohigrometro) => {
-    setEditTarget(t);
-    setModalOpen(true);
-  };
-
-  // If viewing a specific termo
   if (selectedTermo) {
     return (
       <RegistroScreen
         termo={selectedTermo}
+        currentUser={currentUser}
         onBack={() => setSelectedTermo(null)}
       />
     );
@@ -405,10 +534,12 @@ export default function App() {
     <>
       <Dashboard
         termos={termos}
+        currentUser={currentUser}
         onView={setSelectedTermo}
-        onAdd={openAdd}
-        onEdit={openEdit}
+        onAdd={() => { setEditTarget(null); setModalOpen(true); }}
+        onEdit={t => { setEditTarget(t); setModalOpen(true); }}
         onDelete={handleDelete}
+        onLogout={handleLogout}
       />
       {modalOpen && (
         <TermoModal

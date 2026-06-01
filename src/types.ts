@@ -1,5 +1,18 @@
 export type AnexoType = 'anexo10' | 'anexo11';
 
+// ─── Usuarios ─────────────────────────────────────────────────────────────────
+
+export type UserRole = 'admin' | 'operador';
+
+export interface Usuario {
+  id: string;
+  nombre: string;
+  usuario: string;   // login username
+  password: string;  // plain text (local-only app)
+  rol: UserRole;
+  creadoEn: string;
+}
+
 export interface DailyEntry {
   dia: number;
   tempManana: string;

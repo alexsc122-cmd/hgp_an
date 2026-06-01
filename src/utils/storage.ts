@@ -1,4 +1,4 @@
-import { Anexo10Data, Anexo11Data, DailyEntry, RefrigDailyEntry, HeaderInfo, FooterInfo, Termohigrometro } from '../types';
+import { Anexo10Data, Anexo11Data, DailyEntry, RefrigDailyEntry, HeaderInfo, FooterInfo, Termohigrometro, Usuario } from '../types';
 import { daysInMonth } from './calculations';
 
 function emptyHeader(year?: number, month?: number): HeaderInfo {
@@ -181,6 +181,45 @@ export function getMonthsWithData(termoId: string): { year: number; month: numbe
     }
   }
   return result.sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+}
+
+// ─── Usuarios ─────────────────────────────────────────────────────────────────
+
+export function loadUsuarios(): Usuario[] {
+  const raw = localStorage.getItem('usuarios');
+  if (raw) { try { return JSON.parse(raw) as Usuario[]; } catch { /* */ } }
+  return [];
+}
+
+export function saveUsuarios(users: Usuario[]): void {
+  localStorage.setItem('usuarios', JSON.stringify(users));
+}
+
+export function getSession(): Usuario | null {
+  const raw = localStorage.getItem('session');
+  if (raw) { try { return JSON.parse(raw) as Usuario; } catch { /* */ } }
+  return null;
+}
+
+export function setSession(user: Usuario | null): void {
+  if (user) localStorage.setItem('session', JSON.stringify(user));
+  else localStorage.removeItem('session');
+}
+
+// Creates the default admin if no users exist
+export function initAdminIfNeeded(): void {
+  const users = loadUsuarios();
+  if (users.length === 0) {
+    const admin: Usuario = {
+      id: '1',
+      nombre: 'Administrador',
+      usuario: 'admin',
+      password: 'admin123',
+      rol: 'admin',
+      creadoEn: new Date().toISOString(),
+    };
+    saveUsuarios([admin]);
+  }
 }
 
 // ─── Export / Import all data ─────────────────────────────────────────────────

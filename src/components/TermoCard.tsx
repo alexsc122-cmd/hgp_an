@@ -3,15 +3,15 @@ import { Termohigrometro } from '../types';
 interface Props {
   termo: Termohigrometro;
   onView: (t: Termohigrometro) => void;
-  onEdit: (t: Termohigrometro) => void;
-  onDelete: (id: string) => void;
+  onEdit?: (t: Termohigrometro) => void;
+  onDelete?: (id: string) => void;
 }
 
 export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
   const isAmbiental = termo.tipo === 'ambiental';
 
   const handleDelete = () => {
-    if (window.confirm(`¿Eliminar "${termo.nombre}"? Esta acción no se puede deshacer.`)) {
+    if (onDelete && window.confirm(`¿Eliminar "${termo.nombre}"? Esta acción no se puede deshacer.`)) {
       onDelete(termo.id);
     }
   };
@@ -57,20 +57,24 @@ export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
         >
           Ver registros →
         </button>
-        <button
-          onClick={() => onEdit(termo)}
-          title="Editar equipo"
-          className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors text-base"
-        >
-          ✏️
-        </button>
-        <button
-          onClick={handleDelete}
-          title="Eliminar equipo"
-          className="p-2 rounded-lg border border-red-100 hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors text-base"
-        >
-          🗑️
-        </button>
+        {onEdit && (
+          <button
+            onClick={() => onEdit(termo)}
+            title="Editar equipo"
+            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors text-base"
+          >
+            ✏️
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={handleDelete}
+            title="Eliminar equipo"
+            className="p-2 rounded-lg border border-red-100 hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors text-base"
+          >
+            🗑️
+          </button>
+        )}
       </div>
     </div>
   );
