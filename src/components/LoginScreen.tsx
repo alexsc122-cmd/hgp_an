@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Usuario } from '../types';
-import { loadUsuarios, setSession } from '../utils/storage';
+import { setSession } from '../utils/storage';
+import { fsGetUsuarioByLogin, fsLoadUsuarios, fsSaveUsuario } from '../utils/firestore';
 
 interface Props {
   onLogin: (user: Usuario) => void;
@@ -11,15 +12,29 @@ export default function LoginScreen({ onLogin }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = loadUsuarios();
-    const found = users.find(u => u.usuario === usuario.trim() && u.password === password);
-    if (found) {
-      setSession(found);
-      onLogin(found);
-    } else {
-      setError('Usuario o contraseña incorrectos.');
+    setError('');
+    try {
+      // Auto-create admin if no users exist
+      const allUsers = await fsLoadUsuarios();
+      if (allUsers.length === 0) {
+        const admin: import('../types').Usuario = {
+          id: '1', nombre: 'Administrador', usuario: 'admin',
+          password: 'admin123', rol: 'admin', termosAsignados: [],
+          creadoEn: new Date().toISOString(),
+        };
+        await fsSaveUsuario(admin);
+      }
+      const found = await fsGetUsuarioByLogin(usuario.trim());
+      if (found && found.password === password) {
+        setSession(found);
+        onLogin(found);
+      } else {
+        setError('Usuario o contraseña incorrectos.');
+      }
+    } catch {
+      setError('Error de conexión. Verifica tu internet.');
     }
   };
 
