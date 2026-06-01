@@ -549,6 +549,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
                     onFooterChange={footer => setAnexo10(prev => ({ ...prev, footer }))}
                     lockedDays={lockedDays10}
                     onLockedDaysChange={setLockedDays10}
+                    currentUserName={currentUser.nombre}
                   />
                   <Anexo10Chart
                     entries={anexo10.entries}
@@ -572,6 +573,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
                     onFooterChange={footer => setAnexo11(prev => ({ ...prev, footer }))}
                     lockedDays={lockedDays11}
                     onLockedDaysChange={setLockedDays11}
+                    currentUserName={currentUser.nombre}
                   />
                   <Anexo11Chart
                     entries={anexo11.entries}

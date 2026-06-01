@@ -16,6 +16,7 @@ interface Anexo10TableProps {
   onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
   lockedDays: Set<number>;
   onLockedDaysChange: (locked: Set<number>) => void;
+  currentUserName?: string;
 }
 
 function cellCls(outOfRange: boolean) {
@@ -32,7 +33,7 @@ function rowAlert(e: DailyEntry): boolean {
   return tM || tT || hM || hT || tP || hP;
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName }: Anexo10TableProps) {
   const update = (i: number, field: keyof DailyEntry, val: string) => {
     const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
     onChange(next);
@@ -46,6 +47,14 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
       next.delete(dia);
       onLockedDaysChange(next);
     } else {
+      // Auto-fill nombre if empty when confirming
+      if (currentUserName) {
+        const idx = entries.findIndex(e => e.dia === dia);
+        if (idx !== -1 && !entries[idx].nombre) {
+          const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
+          onChange(next);
+        }
+      }
       const next = new Set(lockedDays);
       next.add(dia);
       onLockedDaysChange(next);
@@ -222,6 +231,7 @@ interface Anexo11TableProps {
   onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
   lockedDays: Set<number>;
   onLockedDaysChange: (locked: Set<number>) => void;
+  currentUserName?: string;
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -232,7 +242,7 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
   );
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName }: Anexo11TableProps) {
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
     const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
     onChange(next);
@@ -246,6 +256,14 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
       next.delete(dia);
       onLockedDaysChange(next);
     } else {
+      // Auto-fill nombre if empty when confirming
+      if (currentUserName) {
+        const idx = entries.findIndex(e => e.dia === dia);
+        if (idx !== -1 && !entries[idx].nombre) {
+          const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
+          onChange(next);
+        }
+      }
       const next = new Set(lockedDays);
       next.add(dia);
       onLockedDaysChange(next);
