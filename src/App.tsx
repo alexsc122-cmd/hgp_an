@@ -246,7 +246,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
   // ─── Anexo 10 state ───
   const [anexo10, setAnexo10] = useState<Anexo10Data>({
     header: { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') },
-    footer: { revisadoPor: '', cargo: '', fecha: '' },
+    footer: { revisadoPor: currentUser.nombre, cargo: '', fecha: '' },
     entries: emptyEntries10(currentYear, currentMonthNum),
   });
   const [lockedDays10, setLockedDays10] = useState<Set<number>>(new Set());
@@ -255,7 +255,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
   // ─── Anexo 11 state ───
   const [anexo11, setAnexo11] = useState<Anexo11Data>({
     header: { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') },
-    footer: { revisadoPor: '', cargo: '', fecha: '' },
+    footer: { revisadoPor: currentUser.nombre, cargo: '', fecha: '' },
     entries: emptyEntries11(currentYear, currentMonthNum),
   });
   const [lockedDays11, setLockedDays11] = useState<Set<number>>(new Set());
