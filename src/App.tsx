@@ -19,6 +19,7 @@ import TermoCard from './components/TermoCard';
 import TermoModal from './components/TermoModal';
 import LoginScreen from './components/LoginScreen';
 import UserModal from './components/UserModal';
+import ReportesTab from './components/ReportesTab';
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -42,7 +43,7 @@ interface DashboardProps {
 }
 
 function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
-  const [tab, setTab] = useState<'equipos' | 'usuarios'>('equipos');
+  const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios'>('equipos');
   const [usuarios, setUsuarios] = useState<Usuario[]>(() => loadUsuarios());
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
@@ -87,26 +88,29 @@ function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLog
         </div>
       </nav>
 
-      {/* Tabs — only admin sees Usuarios tab */}
-      {isAdmin && (
-        <div className="bg-white border-b border-gray-200 px-6">
+      {/* Tabs — always visible, Usuarios only for admin */}
+      <div className="bg-white border-b border-gray-200 px-6">
           <div className="flex gap-1 max-w-6xl mx-auto">
-            {(['equipos', 'usuarios'] as const).map(t => (
+            {(['equipos', 'reportes', ...(isAdmin ? ['usuarios'] : [])] as const).map(t => (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => setTab(t as typeof tab)}
                 className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
                   tab === t ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {t === 'equipos' ? '🌡️ Equipos' : '👥 Usuarios'}
+                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : '👥 Usuarios'}
               </button>
             ))}
           </div>
         </div>
-      )}
 
       <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* ─── Reportes tab ─── */}
+        {tab === 'reportes' && (
+          <ReportesTab termos={termos} />
+        )}
+
         {/* ─── Equipos tab ─── */}
         {tab === 'equipos' && (
           <>
