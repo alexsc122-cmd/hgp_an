@@ -1,15 +1,15 @@
-import { Anexo10Data, Anexo11Data, DailyEntry, RefrigDailyEntry, HeaderInfo, FooterInfo } from '../types';
+import { Anexo10Data, Anexo11Data, DailyEntry, RefrigDailyEntry, HeaderInfo, FooterInfo, Termohigrometro } from '../types';
 import { daysInMonth } from './calculations';
 
-function emptyHeader(): HeaderInfo {
+function emptyHeader(year?: number, month?: number): HeaderInfo {
   return {
     institucion: '',
     estrategia: '',
     establecimiento: '',
     direccion: '',
     noEquipo: '',
-    anio: new Date().getFullYear().toString(),
-    mes: (new Date().getMonth() + 1).toString().padStart(2, '0'),
+    anio: (year ?? new Date().getFullYear()).toString(),
+    mes: String(month ?? (new Date().getMonth() + 1)).padStart(2, '0'),
   };
 }
 
@@ -17,7 +17,7 @@ function emptyFooter(): FooterInfo {
   return { revisadoPor: '', cargo: '', fecha: '' };
 }
 
-function emptyEntries10(year: number, month: number): DailyEntry[] {
+export function emptyEntries10(year: number, month: number): DailyEntry[] {
   const days = daysInMonth(year, month);
   return Array.from({ length: days }, (_, i) => ({
     dia: i + 1,
@@ -30,7 +30,7 @@ function emptyEntries10(year: number, month: number): DailyEntry[] {
   }));
 }
 
-function emptyEntries11(year: number, month: number): RefrigDailyEntry[] {
+export function emptyEntries11(year: number, month: number): RefrigDailyEntry[] {
   const days = daysInMonth(year, month);
   return Array.from({ length: days }, (_, i) => ({
     dia: i + 1,
@@ -41,8 +41,54 @@ function emptyEntries11(year: number, month: number): RefrigDailyEntry[] {
   }));
 }
 
-export function loadAnexo10(year: number, month: number): Anexo10Data {
-  const key = `anexo10-${year}-${String(month).padStart(2, '0')}`;
+// ─── Termohigrómetros CRUD ────────────────────────────────────────────────────
+
+export function loadTermos(): Termohigrometro[] {
+  const raw = localStorage.getItem('termos');
+  if (raw) {
+    try {
+      return JSON.parse(raw) as Termohigrometro[];
+    } catch {
+      // fall through
+    }
+  }
+  return [];
+}
+
+export function saveTermos(termos: Termohigrometro[]): void {
+  localStorage.setItem('termos', JSON.stringify(termos));
+}
+
+export function addTermo(termo: Termohigrometro): void {
+  const termos = loadTermos();
+  termos.push(termo);
+  saveTermos(termos);
+}
+
+export function updateTermo(updated: Termohigrometro): void {
+  const termos = loadTermos().map(t => t.id === updated.id ? updated : t);
+  saveTermos(termos);
+}
+
+export function deleteTermo(id: string): void {
+  const termos = loadTermos().filter(t => t.id !== id);
+  saveTermos(termos);
+}
+
+// ─── Per-termo record keys ────────────────────────────────────────────────────
+
+function recordKey(termoId: string, year: number, month: number): string {
+  return `registro-${termoId}-${year}-${String(month).padStart(2, '0')}`;
+}
+
+function lockedKey(termoId: string, year: number, month: number): string {
+  return `locked-${termoId}-${year}-${String(month).padStart(2, '0')}`;
+}
+
+// ─── Anexo 10 ─────────────────────────────────────────────────────────────────
+
+export function loadAnexo10(year: number, month: number, termoId?: string): Anexo10Data {
+  const key = termoId ? recordKey(termoId, year, month) : `anexo10-${year}-${String(month).padStart(2, '0')}`;
   const raw = localStorage.getItem(key);
   if (raw) {
     try {
@@ -52,19 +98,21 @@ export function loadAnexo10(year: number, month: number): Anexo10Data {
     }
   }
   return {
-    header: { ...emptyHeader(), anio: year.toString(), mes: String(month).padStart(2, '0') },
+    header: { ...emptyHeader(year, month) },
     footer: emptyFooter(),
     entries: emptyEntries10(year, month),
   };
 }
 
-export function saveAnexo10(year: number, month: number, data: Anexo10Data): void {
-  const key = `anexo10-${year}-${String(month).padStart(2, '0')}`;
+export function saveAnexo10(year: number, month: number, data: Anexo10Data, termoId?: string): void {
+  const key = termoId ? recordKey(termoId, year, month) : `anexo10-${year}-${String(month).padStart(2, '0')}`;
   localStorage.setItem(key, JSON.stringify(data));
 }
 
-export function loadAnexo11(year: number, month: number): Anexo11Data {
-  const key = `anexo11-${year}-${String(month).padStart(2, '0')}`;
+// ─── Anexo 11 ─────────────────────────────────────────────────────────────────
+
+export function loadAnexo11(year: number, month: number, termoId?: string): Anexo11Data {
+  const key = termoId ? recordKey(termoId, year, month) : `anexo11-${year}-${String(month).padStart(2, '0')}`;
   const raw = localStorage.getItem(key);
   if (raw) {
     try {
@@ -74,21 +122,21 @@ export function loadAnexo11(year: number, month: number): Anexo11Data {
     }
   }
   return {
-    header: { ...emptyHeader(), anio: year.toString(), mes: String(month).padStart(2, '0') },
+    header: { ...emptyHeader(year, month) },
     footer: emptyFooter(),
     entries: emptyEntries11(year, month),
   };
 }
 
-export function saveAnexo11(year: number, month: number, data: Anexo11Data): void {
-  const key = `anexo11-${year}-${String(month).padStart(2, '0')}`;
+export function saveAnexo11(year: number, month: number, data: Anexo11Data, termoId?: string): void {
+  const key = termoId ? recordKey(termoId, year, month) : `anexo11-${year}-${String(month).padStart(2, '0')}`;
   localStorage.setItem(key, JSON.stringify(data));
 }
 
 // ─── Locked days ──────────────────────────────────────────────────────────────
 
-export function loadLockedDays(anexo: 'locked10' | 'locked11', year: number, month: number): Set<number> {
-  const key = `${anexo}-${year}-${String(month).padStart(2, '0')}`;
+export function loadLockedDays(termoId: string, year: number, month: number): Set<number> {
+  const key = lockedKey(termoId, year, month);
   const raw = localStorage.getItem(key);
   if (raw) {
     try {
@@ -101,16 +149,38 @@ export function loadLockedDays(anexo: 'locked10' | 'locked11', year: number, mon
   return new Set();
 }
 
-export function saveLockedDays(anexo: 'locked10' | 'locked11', year: number, month: number, locked: Set<number>): void {
-  const key = `${anexo}-${year}-${String(month).padStart(2, '0')}`;
+export function saveLockedDays(termoId: string, year: number, month: number, locked: Set<number>): void {
+  const key = lockedKey(termoId, year, month);
   localStorage.setItem(key, JSON.stringify(Array.from(locked)));
 }
 
 // ─── Has data ─────────────────────────────────────────────────────────────────
 
-export function hasDataForMonth(anexo: 'anexo10' | 'anexo11', year: number, month: number): boolean {
-  const key = `${anexo}-${year}-${String(month).padStart(2, '0')}`;
+export function hasDataForMonth(termoId: string, year: number, month: number): boolean {
+  const key = recordKey(termoId, year, month);
   return localStorage.getItem(key) !== null;
+}
+
+// ─── Get all months with data for a termo ─────────────────────────────────────
+
+export function getMonthsWithData(termoId: string): { year: number; month: number }[] {
+  const prefix = `registro-${termoId}-`;
+  const result: { year: number; month: number }[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      const rest = key.slice(prefix.length); // e.g. "2025-03"
+      const parts = rest.split('-');
+      if (parts.length === 2) {
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        if (!isNaN(year) && !isNaN(month)) {
+          result.push({ year, month });
+        }
+      }
+    }
+  }
+  return result.sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 }
 
 // ─── Export / Import all data ─────────────────────────────────────────────────
@@ -157,5 +227,3 @@ export function importAllData(file: File): Promise<void> {
     reader.readAsText(file);
   });
 }
-
-export { emptyEntries10, emptyEntries11 };

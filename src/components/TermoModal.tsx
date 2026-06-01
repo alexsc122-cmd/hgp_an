@@ -1,0 +1,132 @@
+import { useState, useEffect } from 'react';
+import { Termohigrometro } from '../types';
+
+interface Props {
+  initial?: Termohigrometro | null;
+  onSave: (t: Termohigrometro) => void;
+  onCancel: () => void;
+}
+
+export default function TermoModal({ initial, onSave, onCancel }: Props) {
+  const [nombre, setNombre] = useState('');
+  const [numero, setNumero] = useState('');
+  const [tipo, setTipo] = useState<'ambiental' | 'refrigeracion'>('ambiental');
+  const [ubicacion, setUbicacion] = useState('');
+
+  useEffect(() => {
+    if (initial) {
+      setNombre(initial.nombre);
+      setNumero(initial.numero);
+      setTipo(initial.tipo);
+      setUbicacion(initial.ubicacion);
+    } else {
+      setNombre('');
+      setNumero('');
+      setTipo('ambiental');
+      setUbicacion('');
+    }
+  }, [initial]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nombre.trim()) return;
+    const termo: Termohigrometro = {
+      id: initial?.id ?? Date.now().toString(),
+      nombre: nombre.trim(),
+      numero: numero.trim(),
+      tipo,
+      ubicacion: ubicacion.trim(),
+      creadoEn: initial?.creadoEn ?? new Date().toISOString(),
+    };
+    onSave(termo);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-blue-900">
+            {initial ? 'Editar equipo' : 'Agregar equipo'}
+          </h2>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Nombre del equipo *</label>
+            <input
+              required
+              className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Ej. Termohigrómetro 1, Cuarto Frío Bodega"
+              value={nombre}
+              onChange={e => setNombre(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Número de equipo</label>
+            <input
+              className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Ej. TH-001"
+              value={numero}
+              onChange={e => setNumero(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Tipo de registro</label>
+            <label className="flex items-center gap-3 p-3 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+              <input
+                type="radio"
+                name="tipo"
+                value="ambiental"
+                checked={tipo === 'ambiental'}
+                onChange={() => setTipo('ambiental')}
+                className="text-blue-600"
+              />
+              <div>
+                <div className="text-sm font-semibold text-blue-900">Temperatura Ambiente</div>
+                <div className="text-xs text-gray-500">Anexo 10 — Temperatura y Humedad Ambiental</div>
+              </div>
+            </label>
+            <label className="flex items-center gap-3 p-3 border border-teal-200 rounded-lg cursor-pointer hover:bg-teal-50 transition-colors">
+              <input
+                type="radio"
+                name="tipo"
+                value="refrigeracion"
+                checked={tipo === 'refrigeracion'}
+                onChange={() => setTipo('refrigeracion')}
+                className="text-teal-600"
+              />
+              <div>
+                <div className="text-sm font-semibold text-teal-900">Temperatura de Refrigeración</div>
+                <div className="text-xs text-gray-500">Anexo 11 — Temperatura de Refrigeración</div>
+              </div>
+            </label>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Ubicación</label>
+            <input
+              className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Ej. Bodega Principal, Sala de Almacenamiento"
+              value={ubicacion}
+              onChange={e => setUbicacion(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow"
+            >
+              Guardar
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 rounded-lg text-sm transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

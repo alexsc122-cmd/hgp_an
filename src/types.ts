@@ -50,3 +50,14 @@ export const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
+
+// ─── Termohigrómetro model ────────────────────────────────────────────────────
+
+export interface Termohigrometro {
+  id: string;
+  nombre: string;
+  numero: string;
+  tipo: 'ambiental' | 'refrigeracion';
+  ubicacion: string;
+  creadoEn: string;
+}
