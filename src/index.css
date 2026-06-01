@@ -3,8 +3,11 @@
 @tailwind utilities;
 
 @media print {
-  body * { visibility: hidden; }
-  #print-area, #print-area * { visibility: visible; }
-  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
   .no-print { display: none !important; }
+  nav { display: none !important; }
+  aside { display: none !important; }
+  body { background: white !important; }
+  .bg-gradient-to-br { background: white !important; }
+  main { margin-left: 0 !important; padding: 0 !important; }
+  .shadow-md, .shadow-sm, .shadow-lg { box-shadow: none !important; }
 }
