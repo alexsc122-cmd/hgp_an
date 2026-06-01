@@ -17,6 +17,7 @@ interface Anexo10TableProps {
   lockedDays: Set<number>;
   onLockedDaysChange: (locked: Set<number>) => void;
   currentUserName?: string;
+  isAdmin?: boolean;
 }
 
 function cellCls(outOfRange: boolean) {
@@ -33,7 +34,7 @@ function rowAlert(e: DailyEntry): boolean {
   return tM || tT || hM || hT || tP || hP;
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo10TableProps) {
   const update = (i: number, field: keyof DailyEntry, val: string) => {
     const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
     onChange(next);
@@ -42,18 +43,17 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
   const toggleLock = (dia: number) => {
     const isLocked = lockedDays.has(dia);
     if (isLocked) {
+      if (!isAdmin) { alert('Solo un administrador puede desbloquear un día confirmado.'); return; }
       if (!window.confirm('¿Deseas editar este día?')) return;
       const next = new Set(lockedDays);
       next.delete(dia);
       onLockedDaysChange(next);
     } else {
-      // Auto-fill nombre if empty when confirming
-      if (currentUserName) {
-        const idx = entries.findIndex(e => e.dia === dia);
-        if (idx !== -1 && !entries[idx].nombre) {
-          const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
-          onChange(next);
-        }
+      // Auto-fill nombre with current user when confirming
+      const idx = entries.findIndex(e => e.dia === dia);
+      if (idx !== -1 && currentUserName) {
+        const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
+        onChange(next);
       }
       const next = new Set(lockedDays);
       next.add(dia);
@@ -232,6 +232,7 @@ interface Anexo11TableProps {
   lockedDays: Set<number>;
   onLockedDaysChange: (locked: Set<number>) => void;
   currentUserName?: string;
+  isAdmin?: boolean;
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -242,7 +243,7 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
   );
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo11TableProps) {
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
     const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
     onChange(next);
@@ -251,18 +252,17 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
   const toggleLock = (dia: number) => {
     const isLocked = lockedDays.has(dia);
     if (isLocked) {
+      if (!isAdmin) { alert('Solo un administrador puede desbloquear un día confirmado.'); return; }
       if (!window.confirm('¿Deseas editar este día?')) return;
       const next = new Set(lockedDays);
       next.delete(dia);
       onLockedDaysChange(next);
     } else {
-      // Auto-fill nombre if empty when confirming
-      if (currentUserName) {
-        const idx = entries.findIndex(e => e.dia === dia);
-        if (idx !== -1 && !entries[idx].nombre) {
-          const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
-          onChange(next);
-        }
+      // Auto-fill nombre with current user when confirming
+      const idx = entries.findIndex(e => e.dia === dia);
+      if (idx !== -1 && currentUserName) {
+        const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
+        onChange(next);
       }
       const next = new Set(lockedDays);
       next.add(dia);
