@@ -22,6 +22,10 @@ import LoginScreen from './components/LoginScreen';
 import UserModal from './components/UserModal';
 import ReportesTab from './components/ReportesTab';
 
+function fillNombres<T extends { nombre?: string }>(entries: T[], nombre: string): T[] {
+  return entries.map(e => (!e.nombre ? { ...e, nombre } : e));
+}
+
 function useDebounce<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -283,7 +287,8 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
         const mesStr = String(currentMonthNum).padStart(2, '0');
         if (isAmbiental) {
           const base = registro as Anexo10Data | null;
-          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(currentYear, currentMonthNum);
+          const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(currentYear, currentMonthNum);
+          const entries = fillNombres(rawEntries, currentUser.nombre);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
           const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
@@ -291,7 +296,8 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           setLockedDays10(locked);
         } else {
           const base = registro as Anexo11Data | null;
-          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
+          const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
+          const entries = fillNombres(rawEntries, currentUser.nombre);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
           const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
@@ -373,7 +379,8 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
             fsLoadLockedDays(termo.id, year, month),
           ]);
           const base = registro as Anexo10Data | null;
-          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
+          const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
+          const entries = fillNombres(rawEntries, currentUser.nombre);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
           const footer10 = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
           if (!footer10.revisadoPor) footer10.revisadoPor = currentUser.nombre;
@@ -388,7 +395,8 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
             fsLoadLockedDays(termo.id, year, month),
           ]);
           const base = registro as Anexo11Data | null;
-          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
+          const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
+          const entries = fillNombres(rawEntries, currentUser.nombre);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
           const footer11 = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
           if (!footer11.revisadoPor) footer11.revisadoPor = currentUser.nombre;
