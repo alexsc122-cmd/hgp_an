@@ -1,22 +1,20 @@
 import { useState } from 'react';
 import { Usuario, UserRole, Termohigrometro } from '../types';
-import { loadTermos } from '../utils/storage';
 
 interface Props {
   initial: Usuario | null;
+  termos: Termohigrometro[];
   onSave: (u: Usuario) => void;
   onCancel: () => void;
 }
 
-export default function UserModal({ initial, onSave, onCancel }: Props) {
+export default function UserModal({ initial, termos, onSave, onCancel }: Props) {
   const [nombre, setNombre] = useState(initial?.nombre ?? '');
   const [usuario, setUsuario] = useState(initial?.usuario ?? '');
   const [password, setPassword] = useState(initial?.password ?? '');
   const [rol, setRol] = useState<UserRole>(initial?.rol ?? 'operador');
   const [termosAsignados, setTermosAsignados] = useState<string[]>(initial?.termosAsignados ?? []);
   const [error, setError] = useState('');
-
-  const termos: Termohigrometro[] = loadTermos();
 
   // Group termos by ubicacion
   const grouped = termos.reduce<Record<string, Termohigrometro[]>>((acc, t) => {

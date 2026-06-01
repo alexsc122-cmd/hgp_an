@@ -216,7 +216,7 @@ function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLog
       </main>
 
       {userModalOpen && (
-        <UserModal initial={editUser} onSave={handleSaveUser} onCancel={() => { setUserModalOpen(false); setEditUser(null); }} />
+        <UserModal initial={editUser} termos={termos} onSave={handleSaveUser} onCancel={() => { setUserModalOpen(false); setEditUser(null); }} />
       )}
     </div>
   );
