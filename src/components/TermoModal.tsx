@@ -3,11 +3,12 @@ import { Termohigrometro } from '../types';
 
 interface Props {
   initial?: Termohigrometro | null;
+  ubicaciones: string[];
   onSave: (t: Termohigrometro) => void;
   onCancel: () => void;
 }
 
-export default function TermoModal({ initial, onSave, onCancel }: Props) {
+export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: Props) {
   const [nombre, setNombre] = useState('');
   const [numero, setNumero] = useState('');
   const [tipo, setTipo] = useState<'ambiental' | 'refrigeracion'>('ambiental');
@@ -103,12 +104,23 @@ export default function TermoModal({ initial, onSave, onCancel }: Props) {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Ubicación</label>
-            <input
-              className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Ej. Bodega Principal, Sala de Almacenamiento"
-              value={ubicacion}
-              onChange={e => setUbicacion(e.target.value)}
-            />
+            {ubicaciones.length === 0 ? (
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                No hay ubicaciones creadas. El administrador debe crearlas primero desde la pestaña Ubicaciones.
+              </p>
+            ) : (
+              <select
+                required
+                className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                value={ubicacion}
+                onChange={e => setUbicacion(e.target.value)}
+              >
+                <option value="">— Selecciona una ubicación —</option>
+                {ubicaciones.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <button

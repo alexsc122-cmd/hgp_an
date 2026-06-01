@@ -11,6 +11,7 @@ import {
   fsLoadRegistro, fsSaveRegistro,
   fsLoadLockedDays, fsSaveLockedDays,
   fsGetMonthsWithData,
+  fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion,
 } from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -35,10 +36,80 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+// ─── Ubicaciones Tab ──────────────────────────────────────────────────────────
+
+function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
+  const [lista, setLista] = useState<string[]>(ubicaciones);
+  const [nueva, setNueva] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAdd = async () => {
+    const trimmed = nueva.trim();
+    if (!trimmed || lista.includes(trimmed)) return;
+    setLoading(true);
+    try {
+      await fsSaveUbicacion(trimmed);
+      setLista(prev => [...prev, trimmed].sort());
+      setNueva('');
+    } catch { alert('Error al guardar ubicación.'); }
+    setLoading(false);
+  };
+
+  const handleDelete = async (u: string) => {
+    if (!confirm(`¿Eliminar la ubicación "${u}"?`)) return;
+    try {
+      await fsDeleteUbicacion(u);
+      setLista(prev => prev.filter(x => x !== u));
+    } catch { alert('Error al eliminar ubicación.'); }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-blue-900">Ubicaciones</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Define los lugares donde se instalan los equipos</p>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-lg">
+        <div className="flex gap-2 mb-4">
+          <input
+            className="flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            placeholder="Ej. Bodega Principal, Sala de Almacenamiento"
+            value={nueva}
+            onChange={e => setNueva(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={loading || !nueva.trim()}
+            className="bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            Agregar
+          </button>
+        </div>
+        {lista.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No hay ubicaciones registradas.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {lista.map(u => (
+              <li key={u} className="flex items-center justify-between py-2.5">
+                <span className="text-sm text-gray-800 flex items-center gap-2">📍 {u}</span>
+                <button onClick={() => handleDelete(u)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ─── Screen 1: Dashboard ──────────────────────────────────────────────────────
 
 interface DashboardProps {
   termos: Termohigrometro[];
+  ubicaciones: string[];
   currentUser: Usuario;
   onView: (t: Termohigrometro) => void;
   onAdd: () => void;
@@ -47,8 +118,8 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
-  const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios'>('equipos');
+function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
+  const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios' | 'ubicaciones'>('equipos');
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
@@ -109,7 +180,7 @@ function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLog
       {/* Tabs — always visible, Usuarios only for admin */}
       <div className="bg-white border-b border-gray-200 px-6">
           <div className="flex gap-1 max-w-6xl mx-auto">
-            {(['equipos', 'reportes', ...(isAdmin ? ['usuarios'] : [])] as const).map(t => (
+            {(['equipos', 'reportes', ...(isAdmin ? ['usuarios', 'ubicaciones'] : [])] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t as typeof tab)}
@@ -117,7 +188,7 @@ function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLog
                   tab === t ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : '👥 Usuarios'}
+                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : t === 'usuarios' ? '👥 Usuarios' : '📍 Ubicaciones'}
               </button>
             ))}
           </div>
@@ -216,6 +287,11 @@ function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLog
               </table>
             </div>
           </>
+        )}
+
+        {/* ─── Ubicaciones tab (admin only) ─── */}
+        {tab === 'ubicaciones' && isAdmin && (
+          <UbicacionesTab ubicaciones={ubicaciones} />
         )}
       </main>
 
@@ -605,11 +681,13 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
 export default function App() {
   const [currentUser, setCurrentUser] = useState<Usuario | null>(() => getSession());
   const [termos, setTermos] = useState<Termohigrometro[]>([]);
+  const [ubicaciones, setUbicaciones] = useState<string[]>([]);
 
   useEffect(() => {
     fsLoadTermos().then(setTermos).catch(() => {
       alert('Error al cargar equipos. Verifica tu conexión.');
     });
+    fsLoadUbicaciones().then(setUbicaciones).catch(() => {});
   }, []);
 
   // Visible termos: admin sees all, operador sees only assigned ones
@@ -670,6 +748,7 @@ export default function App() {
     <>
       <Dashboard
         termos={visibleTermos}
+        ubicaciones={ubicaciones}
         currentUser={currentUser}
         onView={setSelectedTermo}
         onAdd={() => { setEditTarget(null); setModalOpen(true); }}
@@ -680,6 +759,7 @@ export default function App() {
       {modalOpen && (
         <TermoModal
           initial={editTarget}
+          ubicaciones={ubicaciones}
           onSave={handleSaveTermo}
           onCancel={() => { setModalOpen(false); setEditTarget(null); }}
         />

@@ -66,6 +66,23 @@ export async function fsGetMonthsWithData(termoId: string): Promise<{ year: numb
   return snap.docs.map(d => ({ year: d.data().year as number, month: d.data().month as number }));
 }
 
+// ─── Ubicaciones ──────────────────────────────────────────────────────────────
+
+export async function fsLoadUbicaciones(): Promise<string[]> {
+  const snap = await getDocs(collection(db, 'ubicaciones'));
+  return snap.docs.map(d => d.data().nombre as string).sort();
+}
+
+export async function fsSaveUbicacion(nombre: string): Promise<void> {
+  const id = nombre.trim().toLowerCase().replace(/\s+/g, '_');
+  await setDoc(doc(db, 'ubicaciones', id), { nombre: nombre.trim() });
+}
+
+export async function fsDeleteUbicacion(nombre: string): Promise<void> {
+  const id = nombre.trim().toLowerCase().replace(/\s+/g, '_');
+  await deleteDoc(doc(db, 'ubicaciones', id));
+}
+
 // ─── Días bloqueados ──────────────────────────────────────────────────────────
 
 export async function fsLoadLockedDays(termoId: string, year: number, month: number): Promise<Set<number>> {
