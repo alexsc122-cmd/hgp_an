@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Termohigrometro, MESES } from '../types';
-import { getMonthsWithData } from '../utils/storage';
 
 interface Props {
   termo: Termohigrometro;
@@ -8,8 +7,7 @@ interface Props {
   selectedMonth: number;
   onNavigate: (year: number, month: number) => void;
   onBack: () => void;
-  onExport: () => void;
-  onImport: (file: File) => void;
+  monthsWithData: { year: number; month: number }[];
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -20,8 +18,7 @@ export default function Sidebar({
   selectedMonth,
   onNavigate,
   onBack,
-  onExport,
-  onImport,
+  monthsWithData,
   isOpen,
   onToggle,
 }: Props) {
@@ -29,7 +26,6 @@ export default function Sidebar({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const monthsWithData = getMonthsWithData(termo.id);
   const yearsWithData = Array.from(new Set(monthsWithData.map(m => m.year)));
 
   // Always include current year
@@ -50,17 +46,6 @@ export default function Sidebar({
   const isCurrent = (y: number, m: number) => y === currentYear && m === currentMonth;
 
   const isAmbiental = termo.tipo === 'ambiental';
-
-  const handleImportClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) onImport(file);
-    };
-    input.click();
-  };
 
   return (
     <>
@@ -179,22 +164,6 @@ export default function Sidebar({
               </div>
             ))}
           </nav>
-
-          {/* Export/Import */}
-          <div className="px-4 py-3 border-t border-blue-50 space-y-2">
-            <button
-              onClick={onExport}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-green-700 hover:bg-green-800 text-white text-xs font-semibold transition-colors"
-            >
-              ↓ Exportar respaldo (JSON)
-            </button>
-            <button
-              onClick={handleImportClick}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-green-300 hover:bg-green-50 text-green-800 text-xs font-semibold transition-colors"
-            >
-              ↑ Importar respaldo
-            </button>
-          </div>
         </div>
       </aside>
     </>

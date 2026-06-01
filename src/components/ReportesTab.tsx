@@ -1,11 +1,11 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { Termohigrometro, MESES } from '../types';
-import { loadAnexo10, loadAnexo11, getMonthsWithData } from '../utils/storage';
+import { Termohigrometro, Anexo10Data, Anexo11Data, MESES } from '../types';
+import { fsLoadRegistro, fsGetMonthsWithData } from '../utils/firestore';
 import { calcProm } from '../utils/calculations';
 
 interface Props {
@@ -39,6 +39,10 @@ export default function ReportesTab({ termos }: Props) {
   const [selectedTermoId, setSelectedTermoId] = useState<string>(termos[0]?.id ?? '');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [monthsWithData, setMonthsWithData] = useState<{ year: number; month: number }[]>([]);
+  const [data10, setData10] = useState<Anexo10Data | null>(null);
+  const [data11, setData11] = useState<Anexo11Data | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const termo = termos.find(t => t.id === selectedTermoId);
   const isAmbiental = termo?.tipo === 'ambiental';
@@ -49,28 +53,46 @@ export default function ReportesTab({ termos }: Props) {
     documentTitle: `Reporte_${termo?.nombre ?? ''}_${MESES[selectedMonth - 1]}_${selectedYear}`,
   });
 
-  // All months that have data for this termo
-  const monthsWithData = useMemo(
-    () => (selectedTermoId ? getMonthsWithData(selectedTermoId) : []),
-    [selectedTermoId]
-  );
+  // Load months with data when termo changes
+  useEffect(() => {
+    if (!selectedTermoId) return;
+    fsGetMonthsWithData(selectedTermoId)
+      .then(setMonthsWithData)
+      .catch(() => alert('Error al cargar meses con datos.'));
+  }, [selectedTermoId]);
+
+  // Load registro data when termo, year, or month changes
+  useEffect(() => {
+    if (!selectedTermoId) return;
+    let cancelled = false;
+    setLoading(true);
+    setData10(null);
+    setData11(null);
+    fsLoadRegistro(selectedTermoId, selectedYear, selectedMonth)
+      .then(registro => {
+        if (cancelled) return;
+        if (isAmbiental) {
+          setData10((registro as Anexo10Data | null));
+          setData11(null);
+        } else {
+          setData11((registro as Anexo11Data | null));
+          setData10(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) alert('Error al cargar datos del reporte.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedTermoId, selectedYear, selectedMonth, isAmbiental]);
 
   // Available years
   const years = useMemo(() => {
     const ys = Array.from(new Set([now.getFullYear(), ...monthsWithData.map(m => m.year)]));
     return ys.sort((a, b) => b - a);
   }, [monthsWithData]);
-
-  // Load data for selected month
-  const data10 = useMemo(() => {
-    if (!selectedTermoId || !isAmbiental) return null;
-    return loadAnexo10(selectedYear, selectedMonth, selectedTermoId);
-  }, [selectedTermoId, selectedYear, selectedMonth, isAmbiental]);
-
-  const data11 = useMemo(() => {
-    if (!selectedTermoId || isAmbiental) return null;
-    return loadAnexo11(selectedYear, selectedMonth, selectedTermoId);
-  }, [selectedTermoId, selectedYear, selectedMonth, isAmbiental]);
 
   // ─── Build chart data & stats ─────────────────────────────────────────────
 
@@ -212,7 +234,11 @@ export default function ReportesTab({ termos }: Props) {
         </div>
       </div>
 
-      {!hasData ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <p className="text-blue-600">Cargando...</p>
+        </div>
+      ) : !hasData ? (
         <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 bg-white rounded-xl border border-blue-100">
           <div className="text-4xl mb-3">📭</div>
           <p className="font-semibold text-gray-600">Sin datos para {MESES[selectedMonth - 1]} {selectedYear}</p>

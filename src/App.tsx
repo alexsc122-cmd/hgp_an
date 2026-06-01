@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Termohigrometro, Anexo10Data, Anexo11Data, MESES, Usuario } from './types';
 import {
-  loadTermos, saveTermos,
-  loadAnexo10, saveAnexo10,
-  loadAnexo11, saveAnexo11,
   emptyEntries10, emptyEntries11,
-  loadLockedDays, saveLockedDays,
-  exportAllData, importAllData,
-  loadUsuarios, saveUsuarios,
   getSession, setSession,
-  initAdminIfNeeded,
 } from './utils/storage';
+import {
+  fsLoadTermos, fsSaveTermo, fsDeleteTermo,
+  fsLoadUsuarios, fsSaveUsuario, fsDeleteUsuario,
+  fsLoadRegistro, fsSaveRegistro,
+  fsLoadLockedDays, fsSaveLockedDays,
+  fsGetMonthsWithData,
+} from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
 import { Anexo10Chart, Anexo11Chart } from './components/TempChart';
@@ -45,25 +45,38 @@ interface DashboardProps {
 
 function Dashboard({ termos, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
   const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios'>('equipos');
-  const [usuarios, setUsuarios] = useState<Usuario[]>(() => loadUsuarios());
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
   const isAdmin = currentUser.rol === 'admin';
 
-  const handleSaveUser = (u: Usuario) => {
-    const updated = editUser ? usuarios.map(x => x.id === u.id ? u : x) : [...usuarios, u];
-    saveUsuarios(updated);
-    setUsuarios(updated);
-    setUserModalOpen(false);
-    setEditUser(null);
+  useEffect(() => {
+    fsLoadUsuarios().then(setUsuarios).catch(() => {
+      alert('Error al cargar usuarios.');
+    });
+  }, []);
+
+  const handleSaveUser = async (u: Usuario) => {
+    try {
+      await fsSaveUsuario(u);
+      const updated = editUser ? usuarios.map(x => x.id === u.id ? u : x) : [...usuarios, u];
+      setUsuarios(updated);
+      setUserModalOpen(false);
+      setEditUser(null);
+    } catch {
+      alert('Error al guardar usuario.');
+    }
   };
 
-  const handleDeleteUser = (id: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (id === currentUser.id) { alert('No puedes eliminar tu propio usuario.'); return; }
     if (!confirm('¿Eliminar este usuario?')) return;
-    const updated = usuarios.filter(u => u.id !== id);
-    saveUsuarios(updated);
-    setUsuarios(updated);
+    try {
+      await fsDeleteUsuario(id);
+      setUsuarios(usuarios.filter(u => u.id !== id));
+    } catch {
+      alert('Error al eliminar usuario.');
+    }
   };
 
   return (
@@ -225,34 +238,29 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthNum);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
+  const [loading, setLoading] = useState(true);
+  const [monthsWithData, setMonthsWithData] = useState<{ year: number; month: number }[]>([]);
 
   const isAmbiental = termo.tipo === 'ambiental';
 
   // ─── Anexo 10 state ───
-  const [anexo10, setAnexo10] = useState<Anexo10Data>(() => {
-    const loaded = loadAnexo10(currentYear, currentMonthNum, termo.id);
-    const entries = loaded.entries.length > 0 ? loaded.entries : emptyEntries10(currentYear, currentMonthNum);
-    const header = { ...loaded.header, noEquipo: loaded.header.noEquipo || termo.numero };
-    return { ...loaded, header, entries };
+  const [anexo10, setAnexo10] = useState<Anexo10Data>({
+    header: { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') },
+    footer: { revisadoPor: '', cargo: '', fecha: '' },
+    entries: emptyEntries10(currentYear, currentMonthNum),
   });
-  const [lockedDays10, setLockedDays10] = useState<Set<number>>(() =>
-    loadLockedDays(termo.id, currentYear, currentMonthNum)
-  );
+  const [lockedDays10, setLockedDays10] = useState<Set<number>>(new Set());
   const [loadedKey10, setLoadedKey10] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
 
   // ─── Anexo 11 state ───
-  const [anexo11, setAnexo11] = useState<Anexo11Data>(() => {
-    const loaded = loadAnexo11(currentYear, currentMonthNum, termo.id);
-    const entries = loaded.entries.length > 0 ? loaded.entries : emptyEntries11(currentYear, currentMonthNum);
-    const header = { ...loaded.header, noEquipo: loaded.header.noEquipo || termo.numero };
-    return { ...loaded, header, entries };
+  const [anexo11, setAnexo11] = useState<Anexo11Data>({
+    header: { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') },
+    footer: { revisadoPor: '', cargo: '', fecha: '' },
+    entries: emptyEntries11(currentYear, currentMonthNum),
   });
-  const [lockedDays11, setLockedDays11] = useState<Set<number>>(() =>
-    loadLockedDays(termo.id, currentYear, currentMonthNum)
-  );
+  const [lockedDays11, setLockedDays11] = useState<Set<number>>(new Set());
   const [loadedKey11, setLoadedKey11] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
 
-  const importFileRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
@@ -260,108 +268,184 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
     documentTitle: `RPIS_${termo.nombre}_${MESES[selectedMonth - 1]}_${selectedYear}`,
   });
 
+  // Initial load
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const [registro, locked, mwd] = await Promise.all([
+          fsLoadRegistro(termo.id, currentYear, currentMonthNum),
+          fsLoadLockedDays(termo.id, currentYear, currentMonthNum),
+          fsGetMonthsWithData(termo.id),
+        ]);
+        if (cancelled) return;
+        const mesStr = String(currentMonthNum).padStart(2, '0');
+        if (isAmbiental) {
+          const base = registro as Anexo10Data | null;
+          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(currentYear, currentMonthNum);
+          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
+          setAnexo10({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          setLockedDays10(locked);
+        } else {
+          const base = registro as Anexo11Data | null;
+          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
+          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
+          setAnexo11({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          setLockedDays11(locked);
+        }
+        setMonthsWithData(mwd);
+      } catch {
+        if (!cancelled) alert('Error al cargar datos. Verifica tu conexión.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Auto-save with debounce
   const debouncedAnexo10 = useDebounce(anexo10, 800);
   const debouncedAnexo11 = useDebounce(anexo11, 800);
 
   useEffect(() => {
+    if (loading) return;
     const y = parseInt(debouncedAnexo10.header.anio);
     const m = parseInt(debouncedAnexo10.header.mes);
-    if (!isNaN(y) && !isNaN(m)) saveAnexo10(y, m, debouncedAnexo10, termo.id);
-  }, [debouncedAnexo10, termo.id]);
+    if (!isNaN(y) && !isNaN(m)) {
+      fsSaveRegistro(termo.id, y, m, debouncedAnexo10).catch(() => {
+        alert('Error al guardar datos de Anexo 10.');
+      });
+    }
+  }, [debouncedAnexo10, termo.id, loading]);
 
   useEffect(() => {
+    if (loading) return;
     const y = parseInt(debouncedAnexo11.header.anio);
     const m = parseInt(debouncedAnexo11.header.mes);
-    if (!isNaN(y) && !isNaN(m)) saveAnexo11(y, m, debouncedAnexo11, termo.id);
-  }, [debouncedAnexo11, termo.id]);
+    if (!isNaN(y) && !isNaN(m)) {
+      fsSaveRegistro(termo.id, y, m, debouncedAnexo11).catch(() => {
+        alert('Error al guardar datos de Anexo 11.');
+      });
+    }
+  }, [debouncedAnexo11, termo.id, loading]);
 
   useEffect(() => {
+    if (loading) return;
     const y = parseInt(anexo10.header.anio);
     const m = parseInt(anexo10.header.mes);
-    if (!isNaN(y) && !isNaN(m)) saveLockedDays(termo.id, y, m, lockedDays10);
-  }, [lockedDays10, anexo10.header.anio, anexo10.header.mes, termo.id]);
+    if (!isNaN(y) && !isNaN(m)) {
+      fsSaveLockedDays(termo.id, y, m, lockedDays10).catch(() => {
+        alert('Error al guardar días bloqueados.');
+      });
+    }
+  }, [lockedDays10, anexo10.header.anio, anexo10.header.mes, termo.id, loading]);
 
   useEffect(() => {
+    if (loading) return;
     const y = parseInt(anexo11.header.anio);
     const m = parseInt(anexo11.header.mes);
-    if (!isNaN(y) && !isNaN(m)) saveLockedDays(termo.id, y, m, lockedDays11);
-  }, [lockedDays11, anexo11.header.anio, anexo11.header.mes, termo.id]);
+    if (!isNaN(y) && !isNaN(m)) {
+      fsSaveLockedDays(termo.id, y, m, lockedDays11).catch(() => {
+        alert('Error al guardar días bloqueados.');
+      });
+    }
+  }, [lockedDays11, anexo11.header.anio, anexo11.header.mes, termo.id, loading]);
 
   // Navigation handler — loads data for selected year/month
-  const handleNavigate = useCallback((year: number, month: number) => {
+  const handleNavigate = useCallback(async (year: number, month: number) => {
     setSelectedYear(year);
     setSelectedMonth(month);
     const mesStr = String(month).padStart(2, '0');
     const newKey = `${year}-${mesStr}`;
 
-    if (isAmbiental) {
-      if (newKey !== loadedKey10) {
-        const loaded = loadAnexo10(year, month, termo.id);
-        const entries = loaded.entries.length > 0 ? loaded.entries : emptyEntries10(year, month);
-        const header = { ...loaded.header, anio: String(year), mes: mesStr, noEquipo: loaded.header.noEquipo || termo.numero };
-        setAnexo10({ ...loaded, header, entries });
-        setLockedDays10(loadLockedDays(termo.id, year, month));
-        setLoadedKey10(newKey);
+    try {
+      if (isAmbiental) {
+        if (newKey !== loadedKey10) {
+          const [registro, locked] = await Promise.all([
+            fsLoadRegistro(termo.id, year, month),
+            fsLoadLockedDays(termo.id, year, month),
+          ]);
+          const base = registro as Anexo10Data | null;
+          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
+          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
+          setAnexo10({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          setLockedDays10(locked);
+          setLoadedKey10(newKey);
+        }
+      } else {
+        if (newKey !== loadedKey11) {
+          const [registro, locked] = await Promise.all([
+            fsLoadRegistro(termo.id, year, month),
+            fsLoadLockedDays(termo.id, year, month),
+          ]);
+          const base = registro as Anexo11Data | null;
+          const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
+          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
+          setAnexo11({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          setLockedDays11(locked);
+          setLoadedKey11(newKey);
+        }
       }
-    } else {
-      if (newKey !== loadedKey11) {
-        const loaded = loadAnexo11(year, month, termo.id);
-        const entries = loaded.entries.length > 0 ? loaded.entries : emptyEntries11(year, month);
-        const header = { ...loaded.header, anio: String(year), mes: mesStr, noEquipo: loaded.header.noEquipo || termo.numero };
-        setAnexo11({ ...loaded, header, entries });
-        setLockedDays11(loadLockedDays(termo.id, year, month));
-        setLoadedKey11(newKey);
-      }
+    } catch {
+      alert('Error al cargar datos del mes seleccionado.');
     }
 
     // Close sidebar on mobile after navigation
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, [isAmbiental, loadedKey10, loadedKey11, termo.id, termo.numero]);
 
-  const handleHeader10Change = useCallback((header: Anexo10Data['header']) => {
+  const handleHeader10Change = useCallback(async (header: Anexo10Data['header']) => {
     const newKey = `${header.anio}-${header.mes}`;
     if (newKey !== loadedKey10) {
       const y = parseInt(header.anio);
       const m = parseInt(header.mes);
-      const loaded = loadAnexo10(y, m, termo.id);
-      const entries = loaded.entries.length > 0 ? loaded.entries : emptyEntries10(y, m);
-      setAnexo10({ ...loaded, header, entries });
-      setLockedDays10(loadLockedDays(termo.id, y, m));
-      setLoadedKey10(newKey);
-      setSelectedYear(y);
-      setSelectedMonth(m);
+      try {
+        const [registro, locked] = await Promise.all([
+          fsLoadRegistro(termo.id, y, m),
+          fsLoadLockedDays(termo.id, y, m),
+        ]);
+        const base = registro as Anexo10Data | null;
+        const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(y, m);
+        setAnexo10({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+        setLockedDays10(locked);
+        setLoadedKey10(newKey);
+        setSelectedYear(y);
+        setSelectedMonth(m);
+      } catch {
+        alert('Error al cargar datos del mes.');
+      }
     } else {
       setAnexo10(prev => ({ ...prev, header }));
     }
   }, [loadedKey10, termo.id]);
 
-  const handleHeader11Change = useCallback((header: Anexo11Data['header']) => {
+  const handleHeader11Change = useCallback(async (header: Anexo11Data['header']) => {
     const newKey = `${header.anio}-${header.mes}`;
     if (newKey !== loadedKey11) {
       const y = parseInt(header.anio);
       const m = parseInt(header.mes);
-      const loaded = loadAnexo11(y, m, termo.id);
-      const entries = loaded.entries.length > 0 ? loaded.entries : emptyEntries11(y, m);
-      setAnexo11({ ...loaded, header, entries });
-      setLockedDays11(loadLockedDays(termo.id, y, m));
-      setLoadedKey11(newKey);
-      setSelectedYear(y);
-      setSelectedMonth(m);
+      try {
+        const [registro, locked] = await Promise.all([
+          fsLoadRegistro(termo.id, y, m),
+          fsLoadLockedDays(termo.id, y, m),
+        ]);
+        const base = registro as Anexo11Data | null;
+        const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(y, m);
+        setAnexo11({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+        setLockedDays11(locked);
+        setLoadedKey11(newKey);
+        setSelectedYear(y);
+        setSelectedMonth(m);
+      } catch {
+        alert('Error al cargar datos del mes.');
+      }
     } else {
       setAnexo11(prev => ({ ...prev, header }));
     }
   }, [loadedKey11, termo.id]);
-
-  const handleImportFile = async (file: File) => {
-    try {
-      await importAllData(file);
-      alert('Respaldo importado correctamente. La página se recargará.');
-      window.location.reload();
-    } catch (err: unknown) {
-      alert('Error al importar: ' + (err instanceof Error ? err.message : String(err)));
-    }
-  };
 
   const year10 = parseInt(anexo10.header.anio);
   const month10 = parseInt(anexo10.header.mes);
@@ -411,8 +495,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           selectedMonth={selectedMonth}
           onNavigate={handleNavigate}
           onBack={onBack}
-          onExport={exportAllData}
-          onImport={handleImportFile}
+          monthsWithData={monthsWithData}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(o => !o)}
         />
@@ -422,72 +505,77 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           className={`flex-1 px-4 md:px-6 py-6 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'ml-0'}`}
           style={{ paddingLeft: sidebarOpen ? undefined : '3.5rem' }}
         >
-          {/* Month/year heading */}
-          <div className="mb-4 flex items-center gap-3">
-            <h2 className="text-lg font-bold text-blue-900">
-              {mesNombre} {selectedYear}
-            </h2>
-            <span
-              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                isAmbiental ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'
-              }`}
-            >
-              {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Temperatura de Refrigeración'}
-            </span>
-          </div>
-
-          {isAmbiental ? (
-            <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
-              <HeaderForm
-                data={anexo10.header}
-                onChange={handleHeader10Change}
-                equipoLabel="No. Termohigrómetro"
-                anexoTitle="ANEXO 10 — REGISTRO DE TEMPERATURA Y HUMEDAD AMBIENTAL"
-                anexoSubtitle="Almacén / Bodega Farmacéutica"
-              />
-              <Anexo10Table
-                entries={anexo10.entries}
-                onChange={entries => setAnexo10(prev => ({ ...prev, entries }))}
-                footer={anexo10.footer}
-                onFooterChange={footer => setAnexo10(prev => ({ ...prev, footer }))}
-                lockedDays={lockedDays10}
-                onLockedDaysChange={setLockedDays10}
-              />
-              <Anexo10Chart
-                entries={anexo10.entries}
-                year={year10}
-                month={month10}
-              />
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <p className="text-blue-600">Cargando...</p>
             </div>
           ) : (
-            <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
-              <HeaderForm
-                data={anexo11.header}
-                onChange={handleHeader11Change}
-                equipoLabel="No. Equipo de Refrigeración"
-                anexoTitle="ANEXO 11 — REGISTRO DE TEMPERATURA DE REFRIGERACIÓN"
-                anexoSubtitle="Almacén / Cadena de Frío Farmacéutica"
-              />
-              <Anexo11Table
-                entries={anexo11.entries}
-                onChange={entries => setAnexo11(prev => ({ ...prev, entries }))}
-                footer={anexo11.footer}
-                onFooterChange={footer => setAnexo11(prev => ({ ...prev, footer }))}
-                lockedDays={lockedDays11}
-                onLockedDaysChange={setLockedDays11}
-              />
-              <Anexo11Chart
-                entries={anexo11.entries}
-                year={year11}
-                month={month11}
-              />
-            </div>
+            <>
+              {/* Month/year heading */}
+              <div className="mb-4 flex items-center gap-3">
+                <h2 className="text-lg font-bold text-blue-900">
+                  {mesNombre} {selectedYear}
+                </h2>
+                <span
+                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    isAmbiental ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'
+                  }`}
+                >
+                  {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Temperatura de Refrigeración'}
+                </span>
+              </div>
+
+              {isAmbiental ? (
+                <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
+                  <HeaderForm
+                    data={anexo10.header}
+                    onChange={handleHeader10Change}
+                    equipoLabel="No. Termohigrómetro"
+                    anexoTitle="ANEXO 10 — REGISTRO DE TEMPERATURA Y HUMEDAD AMBIENTAL"
+                    anexoSubtitle="Almacén / Bodega Farmacéutica"
+                  />
+                  <Anexo10Table
+                    entries={anexo10.entries}
+                    onChange={entries => setAnexo10(prev => ({ ...prev, entries }))}
+                    footer={anexo10.footer}
+                    onFooterChange={footer => setAnexo10(prev => ({ ...prev, footer }))}
+                    lockedDays={lockedDays10}
+                    onLockedDaysChange={setLockedDays10}
+                  />
+                  <Anexo10Chart
+                    entries={anexo10.entries}
+                    year={year10}
+                    month={month10}
+                  />
+                </div>
+              ) : (
+                <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
+                  <HeaderForm
+                    data={anexo11.header}
+                    onChange={handleHeader11Change}
+                    equipoLabel="No. Equipo de Refrigeración"
+                    anexoTitle="ANEXO 11 — REGISTRO DE TEMPERATURA DE REFRIGERACIÓN"
+                    anexoSubtitle="Almacén / Cadena de Frío Farmacéutica"
+                  />
+                  <Anexo11Table
+                    entries={anexo11.entries}
+                    onChange={entries => setAnexo11(prev => ({ ...prev, entries }))}
+                    footer={anexo11.footer}
+                    onFooterChange={footer => setAnexo11(prev => ({ ...prev, footer }))}
+                    lockedDays={lockedDays11}
+                    onLockedDaysChange={setLockedDays11}
+                  />
+                  <Anexo11Chart
+                    entries={anexo11.entries}
+                    year={year11}
+                    month={month11}
+                  />
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
-
-      {/* Hidden import input */}
-      <input ref={importFileRef} type="file" accept=".json" className="hidden" />
     </div>
   );
 }
@@ -495,11 +583,14 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  // Init default admin on first run
-  initAdminIfNeeded();
-
   const [currentUser, setCurrentUser] = useState<Usuario | null>(() => getSession());
-  const [termos, setTermos] = useState<Termohigrometro[]>(() => loadTermos());
+  const [termos, setTermos] = useState<Termohigrometro[]>([]);
+
+  useEffect(() => {
+    fsLoadTermos().then(setTermos).catch(() => {
+      alert('Error al cargar equipos. Verifica tu conexión.');
+    });
+  }, []);
 
   // Visible termos: admin sees all, operador sees only assigned ones
   const visibleTermos = currentUser
@@ -519,19 +610,26 @@ export default function App() {
     setSelectedTermo(null);
   };
 
-  const handleSaveTermo = (t: Termohigrometro) => {
-    const updated = editTarget ? termos.map(x => x.id === t.id ? t : x) : [...termos, t];
-    saveTermos(updated);
-    setTermos(updated);
-    setModalOpen(false);
-    setEditTarget(null);
+  const handleSaveTermo = async (t: Termohigrometro) => {
+    try {
+      await fsSaveTermo(t);
+      const updated = editTarget ? termos.map(x => x.id === t.id ? t : x) : [...termos, t];
+      setTermos(updated);
+      setModalOpen(false);
+      setEditTarget(null);
+    } catch {
+      alert('Error al guardar equipo.');
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar este equipo y todos sus registros?')) return;
-    const updated = termos.filter(t => t.id !== id);
-    saveTermos(updated);
-    setTermos(updated);
+    try {
+      await fsDeleteTermo(id);
+      setTermos(termos.filter(t => t.id !== id));
+    } catch {
+      alert('Error al eliminar equipo.');
+    }
   };
 
   if (!currentUser) {
