@@ -285,13 +285,17 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           const base = registro as Anexo10Data | null;
           const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(currentYear, currentMonthNum);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
-          setAnexo10({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
+          setAnexo10({ ...(base ?? { header, footer }), header, footer, entries });
           setLockedDays10(locked);
         } else {
           const base = registro as Anexo11Data | null;
           const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
-          setAnexo11({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
+          setAnexo11({ ...(base ?? { header, footer }), header, footer, entries });
           setLockedDays11(locked);
         }
         setMonthsWithData(mwd);
@@ -371,7 +375,9 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           const base = registro as Anexo10Data | null;
           const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
-          setAnexo10({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          const footer10 = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          if (!footer10.revisadoPor) footer10.revisadoPor = currentUser.nombre;
+          setAnexo10({ ...(base ?? { header, footer: footer10 }), header, footer: footer10, entries });
           setLockedDays10(locked);
           setLoadedKey10(newKey);
         }
@@ -384,7 +390,9 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           const base = registro as Anexo11Data | null;
           const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
-          setAnexo11({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
+          const footer11 = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          if (!footer11.revisadoPor) footer11.revisadoPor = currentUser.nombre;
+          setAnexo11({ ...(base ?? { header, footer: footer11 }), header, footer: footer11, entries });
           setLockedDays11(locked);
           setLoadedKey11(newKey);
         }
