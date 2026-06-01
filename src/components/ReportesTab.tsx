@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine, ResponsiveContainer,
@@ -41,6 +42,12 @@ export default function ReportesTab({ termos }: Props) {
 
   const termo = termos.find(t => t.id === selectedTermoId);
   const isAmbiental = termo?.tipo === 'ambiental';
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Reporte_${termo?.nombre ?? ''}_${MESES[selectedMonth - 1]}_${selectedYear}`,
+  });
 
   // All months that have data for this termo
   const monthsWithData = useMemo(
@@ -212,7 +219,7 @@ export default function ReportesTab({ termos }: Props) {
           <p className="text-sm mt-1">Ingresa registros de temperatura en la pantalla del equipo</p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div ref={printRef} className="space-y-5">
           {/* ─── Temperatura stats ─── */}
           {tempStats.length > 0 && (
             <div>
@@ -288,7 +295,7 @@ export default function ReportesTab({ termos }: Props) {
             <div className="px-4 py-3 border-b border-blue-50 flex items-center justify-between">
               <h3 className="text-sm font-bold text-blue-900">Resumen diario — {MESES[selectedMonth - 1]} {selectedYear}</h3>
               <button
-                onClick={() => window.print()}
+                onClick={() => handlePrint()}
                 className="text-xs bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors"
               >
                 🖨️ Imprimir reporte
