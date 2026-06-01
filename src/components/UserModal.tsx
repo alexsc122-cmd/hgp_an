@@ -13,7 +13,10 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
   const [usuario, setUsuario] = useState(initial?.usuario ?? '');
   const [password, setPassword] = useState(initial?.password ?? '');
   const [rol, setRol] = useState<UserRole>(initial?.rol ?? 'operador');
-  const [termosAsignados, setTermosAsignados] = useState<string[]>(initial?.termosAsignados ?? []);
+  const validIds = new Set(termos.map(t => t.id));
+  const [termosAsignados, setTermosAsignados] = useState<string[]>(
+    (initial?.termosAsignados ?? []).filter(id => validIds.has(id))
+  );
   const [error, setError] = useState('');
 
   // Group termos by ubicacion
