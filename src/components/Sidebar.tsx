@@ -64,16 +64,18 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Hamburger toggle button — always visible */}
-      <button
-        onClick={onToggle}
-        className="fixed top-16 left-3 z-40 p-2 rounded-lg bg-white border border-blue-200 shadow-md hover:bg-blue-50 transition-colors no-print"
-        title={isOpen ? 'Ocultar panel' : 'Mostrar panel'}
-      >
-        <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      {/* Hamburger toggle button — only visible when sidebar is CLOSED */}
+      {!isOpen && (
+        <button
+          onClick={onToggle}
+          className="fixed top-16 left-3 z-40 p-2 rounded-lg bg-white border border-blue-200 shadow-md hover:bg-blue-50 transition-colors no-print"
+          title="Mostrar panel"
+        >
+          <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      )}
 
       {/* Overlay for mobile */}
       {isOpen && (
@@ -93,12 +95,24 @@ export default function Sidebar({
         <div className="flex flex-col h-full overflow-hidden">
           {/* Back button + equipo info */}
           <div className="px-4 pt-4 pb-3 border-b border-blue-50">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium mb-3 transition-colors"
-            >
-              ← Equipos
-            </button>
+            {/* Top row: back button + close sidebar button */}
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+              >
+                ← Equipos
+              </button>
+              <button
+                onClick={onToggle}
+                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-400 hover:text-blue-700 transition-colors"
+                title="Ocultar panel"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
