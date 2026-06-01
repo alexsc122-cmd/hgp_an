@@ -430,7 +430,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
           </div>
 
           {isAmbiental ? (
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div id="print-area" className="bg-white rounded-xl shadow-md p-6">
               <HeaderForm
                 data={anexo10.header}
                 onChange={handleHeader10Change}
@@ -453,7 +453,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
               />
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div id="print-area" className="bg-white rounded-xl shadow-md p-6">
               <HeaderForm
                 data={anexo11.header}
                 onChange={handleHeader11Change}
