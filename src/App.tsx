@@ -489,6 +489,13 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<Usuario | null>(() => getSession());
   const [termos, setTermos] = useState<Termohigrometro[]>(() => loadTermos());
+
+  // Visible termos: admin sees all, operador sees only assigned ones
+  const visibleTermos = currentUser
+    ? currentUser.rol === 'admin'
+      ? termos
+      : termos.filter(t => currentUser.termosAsignados.includes(t.id))
+    : [];
   const [selectedTermo, setSelectedTermo] = useState<Termohigrometro | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Termohigrometro | null>(null);
@@ -533,7 +540,7 @@ export default function App() {
   return (
     <>
       <Dashboard
-        termos={termos}
+        termos={visibleTermos}
         currentUser={currentUser}
         onView={setSelectedTermo}
         onAdd={() => { setEditTarget(null); setModalOpen(true); }}

@@ -10,6 +10,7 @@ export interface Usuario {
   usuario: string;   // login username
   password: string;  // plain text (local-only app)
   rol: UserRole;
+  termosAsignados: string[];  // termo IDs (empty = all for admin)
   creadoEn: string;
 }
 

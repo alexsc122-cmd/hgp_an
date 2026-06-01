@@ -216,6 +216,7 @@ export function initAdminIfNeeded(): void {
       usuario: 'admin',
       password: 'admin123',
       rol: 'admin',
+      termosAsignados: [],
       creadoEn: new Date().toISOString(),
     };
     saveUsuarios([admin]);
