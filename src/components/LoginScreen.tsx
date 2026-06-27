@@ -55,11 +55,12 @@ export default function LoginScreen({ onLogin }: Props) {
       setSession(found);
       onLogin(found);
     } catch (err: unknown) {
-      const code = (err as { code?: string })?.code ?? '';
+      const code = (err as { code?: string })?.code ?? 'desconocido';
+      const msg = (err as { message?: string })?.message ?? '';
       if (code === 'auth/too-many-requests') {
         setError('Demasiados intentos fallidos. Intenta más tarde.');
       } else {
-        setError('Error de conexión. Verifica tu internet.');
+        setError(`Error [${code}]: ${msg}`);
       }
     }
     setLoading(false);
