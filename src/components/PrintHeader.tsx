@@ -17,9 +17,9 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
     <div className="print-only" style={{ marginBottom: '6px' }}>
       {/* Top row: logo + title + QR — compact */}
       <div style={{ display: 'flex', alignItems: 'center', borderBottom: '2px solid #0f766e', paddingBottom: '5px', marginBottom: '5px' }}>
-        {/* Logo smaller */}
-        <div style={{ marginRight: '10px', flexShrink: 0 }}>
-          <svg width="36" height="36" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Logo */}
+        <div style={{ marginRight: '12px', flexShrink: 0 }}>
+          <svg width="52" height="52" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="28" cy="28" r="27" stroke="#0f766e" strokeWidth="2" fill="white"/>
             <circle cx="22" cy="24" r="10" fill="#f97316" fillOpacity="0.9"/>
             <circle cx="34" cy="24" r="10" fill="#0d9488" fillOpacity="0.7"/>
@@ -28,16 +28,16 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
         </div>
         {/* Title block */}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '9px', color: '#0f766e', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '11px', color: '#0f766e', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             Clínica Renal El Puyo — VIVENS
           </div>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#134e4a', marginTop: '2px', lineHeight: 1.2 }}>{title}</div>
-          <div style={{ fontSize: '9px', color: '#0f766e', marginTop: '2px' }}>{subtitle}</div>
+          <div style={{ fontSize: '17px', fontWeight: 800, color: '#134e4a', marginTop: '3px', lineHeight: 1.2 }}>{title}</div>
+          <div style={{ fontSize: '11px', color: '#0f766e', marginTop: '3px' }}>{subtitle}</div>
         </div>
-        {/* QR Code — smaller */}
-        <div style={{ flexShrink: 0, textAlign: 'center', marginLeft: '12px' }}>
-          <QRCodeSVG value={verifyUrl} size={52} level="M" />
-          <div style={{ fontSize: '6px', color: '#6b7280', marginTop: '1px' }}>Verificar autenticidad</div>
+        {/* QR Code */}
+        <div style={{ flexShrink: 0, textAlign: 'center', marginLeft: '14px' }}>
+          <QRCodeSVG value={verifyUrl} size={72} level="M" />
+          <div style={{ fontSize: '7px', color: '#6b7280', marginTop: '2px' }}>Verificar autenticidad</div>
         </div>
       </div>
 
@@ -54,9 +54,9 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
               ['AÑO', header.anio, '5%'],
               ['MES', mesNombre, '6%'],
             ].map(([label, value, width]) => (
-              <td key={label} style={{ border: '1px solid #99f6e4', padding: '4px 6px', verticalAlign: 'top', width }}>
-                <div style={{ fontSize: '7px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-                <div style={{ fontSize: '10px', color: '#134e4a', marginTop: '2px', fontWeight: 700 }}>{value || '—'}</div>
+              <td key={label} style={{ border: '1px solid #99f6e4', padding: '5px 7px', verticalAlign: 'top', width }}>
+                <div style={{ fontSize: '8px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                <div style={{ fontSize: '12px', color: '#134e4a', marginTop: '3px', fontWeight: 700 }}>{value || '—'}</div>
               </td>
             ))}
           </tr>
