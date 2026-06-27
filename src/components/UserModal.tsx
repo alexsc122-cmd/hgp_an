@@ -12,7 +12,6 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
   const [nombre, setNombre] = useState(initial?.nombre ?? '');
   const [usuario, setUsuario] = useState(initial?.usuario ?? '');
   const [email, setEmail] = useState(initial?.email ?? '');
-  const [password, setPassword] = useState(initial?.password ?? '');
   const [rol, setRol] = useState<UserRole>(initial?.rol ?? 'operador');
   const validIds = new Set(termos.map(t => t.id));
   const [termosAsignados, setTermosAsignados] = useState<string[]>(
@@ -44,8 +43,8 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
   };
 
   const handleSave = () => {
-    if (!nombre.trim() || !usuario.trim() || !email.trim() || !password.trim()) {
-      setError('Nombre, usuario, correo y contraseña son obligatorios.');
+    if (!nombre.trim() || !usuario.trim() || !email.trim()) {
+      setError('Nombre, usuario y correo son obligatorios.');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -61,7 +60,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
       nombre: nombre.trim(),
       usuario: usuario.trim(),
       email: email.trim().toLowerCase(),
-      password: password.trim(),
+      password: initial?.password ?? '',
       rol,
       termosAsignados: rol === 'admin' ? [] : termosAsignados,
       creadoEn: initial?.creadoEn ?? new Date().toISOString(),
@@ -117,14 +116,9 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Contraseña temporal</label>
-            <input
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-              placeholder="••••••••"
-            />
+          <div className="flex items-start gap-2 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2.5">
+            <span className="text-teal-500 text-base shrink-0">✉️</span>
+            <p className="text-xs text-teal-700">Firebase enviará automáticamente un email al correo ingresado con un link para que el usuario establezca su propia contraseña.</p>
           </div>
 
           {/* Rol */}
