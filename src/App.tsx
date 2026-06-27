@@ -544,6 +544,9 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   const [loadedKey11, setLoadedKey11] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
 
   const printRef = useRef<HTMLDivElement>(null);
+  // Tracks whether locked days were successfully loaded — prevents a failed
+  // load (which leaves lockedDays as empty Set) from overwriting Firestore.
+  const lockedDaysReady = useRef(false);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -603,6 +606,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           setAnexo11({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays11(locked);
         }
+        lockedDaysReady.current = true;
         setMonthsWithData(mwd);
       } catch {
         if (!cancelled) alert('Error al cargar datos. Verifica tu conexión.');
@@ -656,7 +660,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   }, [debouncedAnexo11, termo.id, loading]);
 
   useEffect(() => {
-    if (loading) return;
+    if (!lockedDaysReady.current) return;
     const y = parseInt(anexo10.header.anio);
     const m = parseInt(anexo10.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
@@ -664,10 +668,11 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
         alert('Error al guardar días bloqueados.');
       });
     }
-  }, [lockedDays10, anexo10.header.anio, anexo10.header.mes, termo.id, loading]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedDays10, termo.id]);
 
   useEffect(() => {
-    if (loading) return;
+    if (!lockedDaysReady.current) return;
     const y = parseInt(anexo11.header.anio);
     const m = parseInt(anexo11.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
@@ -675,7 +680,8 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
         alert('Error al guardar días bloqueados.');
       });
     }
-  }, [lockedDays11, anexo11.header.anio, anexo11.header.mes, termo.id, loading]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedDays11, termo.id]);
 
   // Navigation handler — loads data for selected year/month
   const handleNavigate = useCallback(async (year: number, month: number) => {
@@ -700,6 +706,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           setAnexo10({ ...(base ?? { header, footer: footer10 }), header, footer: footer10, entries });
           setLockedDays10(locked);
           setLoadedKey10(newKey);
+          lockedDaysReady.current = true;
         }
       } else {
         if (newKey !== loadedKey11) {
@@ -716,6 +723,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           setAnexo11({ ...(base ?? { header, footer: footer11 }), header, footer: footer11, entries });
           setLockedDays11(locked);
           setLoadedKey11(newKey);
+          lockedDaysReady.current = true;
         }
       }
     } catch {
