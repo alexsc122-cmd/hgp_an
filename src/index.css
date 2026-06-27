@@ -4,6 +4,8 @@
 
 @media screen {
   .print-only { display: none !important; }
+  .print-charts-row { display: none !important; }
+  .print-charts-single { display: none !important; }
 }
 @media print {
   /* General */
@@ -67,24 +69,9 @@
   /* Header info table */
   .print-only table { width: 100% !important; }
 
-  /* Charts in print */
-  .print-charts {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-    margin-top: 8px !important;
-    page-break-inside: avoid !important;
-  }
-  .print-charts > div { flex: 1 !important; border: 1px solid #bfdbfe !important; border-radius: 4px !important; padding: 4px 6px !important; }
-  .print-charts h3 { font-size: 8px !important; font-weight: 700 !important; margin-bottom: 2px !important; padding: 0 !important; }
-  .print-charts .recharts-responsive-container { width: 100% !important; height: 110px !important; }
-  .print-charts .recharts-wrapper { width: 100% !important; height: 110px !important; }
-  .print-charts .recharts-surface { width: 100% !important; }
-  .print-charts text { font-size: 6px !important; }
-  .print-charts .recharts-legend-wrapper { font-size: 6px !important; }
-  .print-charts .recharts-tooltip-wrapper { display: none !important; }
-  /* Reset space-y-6 margin inside print-charts so flex row works */
-  .print-charts > div + div { margin-top: 0 !important; }
+  /* Chart print containers */
+  .print-charts-row { display: flex !important; flex-direction: row !important; gap: 8px !important; margin-top: 8px !important; page-break-inside: avoid !important; }
+  .print-charts-single { display: block !important; margin-top: 8px !important; page-break-inside: avoid !important; }
 
   /* Keep signature on same page */
   .footer-print { page-break-before: avoid !important; break-before: avoid !important; }
