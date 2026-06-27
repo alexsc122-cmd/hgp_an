@@ -7,7 +7,36 @@ import {
   isOutOfRangeTemp11,
 } from '../utils/calculations';
 
-// ─── Anexo 10 Table ────────────────────────────────────────────────────────────
+function cellCls(outOfRange: boolean) {
+  return outOfRange ? 'bg-red-100 text-red-700 font-semibold' : '';
+}
+
+// ─── Shared footer ────────────────────────────────────────────────────────────
+
+function FooterFields({ footer, onFooterChange }: {
+  footer: { revisadoPor: string; cargo: string; fecha: string };
+  onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
+}) {
+  return (
+    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+      {(['revisadoPor', 'cargo', 'fecha'] as const).map(k => (
+        <div key={k} className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
+            {k === 'revisadoPor' ? 'Revisado por' : k === 'cargo' ? 'Cargo' : 'Fecha'}
+          </label>
+          <input
+            className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            value={footer[k]}
+            onChange={e => onFooterChange({ ...footer, [k]: e.target.value })}
+            type={k === 'fecha' ? 'date' : 'text'}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Anexo 10 ─────────────────────────────────────────────────────────────────
 
 interface Anexo10TableProps {
   entries: DailyEntry[];
@@ -20,24 +49,18 @@ interface Anexo10TableProps {
   isAdmin?: boolean;
 }
 
-function cellCls(outOfRange: boolean) {
-  return outOfRange ? 'bg-red-100 text-red-700 font-semibold' : '';
-}
-
 function rowAlert(e: DailyEntry): boolean {
-  const tM = isOutOfRangeTemp10(e.tempManana);
-  const tT = isOutOfRangeTemp10(e.tempTarde);
-  const hM = isOutOfRangeHum10(e.humManana);
-  const hT = isOutOfRangeHum10(e.humTarde);
-  const tP = isOutOfRangeTemp10(calcProm(e.tempManana, e.tempTarde));
-  const hP = isOutOfRangeHum10(calcProm(e.humManana, e.humTarde));
-  return tM || tT || hM || hT || tP || hP;
+  return (
+    isOutOfRangeTemp10(e.tempManana) || isOutOfRangeTemp10(e.tempTarde) ||
+    isOutOfRangeHum10(e.humManana) || isOutOfRangeHum10(e.humTarde) ||
+    isOutOfRangeTemp10(calcProm(e.tempManana, e.tempTarde)) ||
+    isOutOfRangeHum10(calcProm(e.humManana, e.humTarde))
+  );
 }
 
 export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo10TableProps) {
   const update = (i: number, field: keyof DailyEntry, val: string) => {
-    const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
-    onChange(next);
+    onChange(entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e));
   };
 
   const toggleLock = (dia: number) => {
@@ -45,184 +68,226 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
     if (isLocked) {
       if (!isAdmin) { alert('Solo un administrador puede desbloquear un día confirmado.'); return; }
       if (!window.confirm('¿Deseas editar este día?')) return;
-      const next = new Set(lockedDays);
-      next.delete(dia);
-      onLockedDaysChange(next);
+      const next = new Set(lockedDays); next.delete(dia); onLockedDaysChange(next);
     } else {
-      // Auto-fill nombre with current user when confirming
       const idx = entries.findIndex(e => e.dia === dia);
       if (idx !== -1 && currentUserName) {
-        const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
-        onChange(next);
+        onChange(entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e));
       }
-      const next = new Set(lockedDays);
-      next.add(dia);
-      onLockedDaysChange(next);
+      const next = new Set(lockedDays); next.add(dia); onLockedDaysChange(next);
     }
   };
 
-  const inputCls = 'w-full bg-transparent text-center text-sm focus:outline-none focus:bg-blue-50 rounded px-1 py-0.5';
-  const textInputCls = 'w-full bg-transparent text-sm focus:outline-none focus:bg-blue-50 rounded px-1 py-0.5';
-
-  // Monthly averages
   const avgTempM = monthlyAverage(entries.map(e => e.tempManana));
   const avgTempT = monthlyAverage(entries.map(e => e.tempTarde));
   const avgTempP = monthlyAverage(entries.map(e => calcProm(e.tempManana, e.tempTarde)));
-  const avgHumM = monthlyAverage(entries.map(e => e.humManana));
-  const avgHumT = monthlyAverage(entries.map(e => e.humTarde));
-  const avgHumP = monthlyAverage(entries.map(e => calcProm(e.humManana, e.humTarde)));
+  const avgHumM  = monthlyAverage(entries.map(e => e.humManana));
+  const avgHumT  = monthlyAverage(entries.map(e => e.humTarde));
+  const avgHumP  = monthlyAverage(entries.map(e => calcProm(e.humManana, e.humTarde)));
 
-  const thCls = 'px-2 py-2 text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 text-center whitespace-nowrap';
-  const tdCls = 'border border-blue-100 px-1 py-0.5';
+  const inputNum = 'w-full bg-transparent text-center text-sm focus:outline-none focus:bg-teal-50 rounded px-1 py-1';
+  const inputTxt = 'w-full bg-transparent text-sm focus:outline-none focus:bg-teal-50 rounded px-1 py-1';
+  const thCls = 'px-2 py-2 text-xs font-bold text-teal-900 bg-teal-50 border border-teal-200 text-center whitespace-nowrap';
+  const tdCls = 'border border-teal-100 px-1 py-0.5';
 
   return (
-    <div className="overflow-x-auto">
-      {/* Alert legend */}
-      <div className="flex items-center gap-4 mb-2 text-xs text-gray-600 no-print">
-        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block"></span> Fuera de rango</span>
+    <div>
+      {/* Legend */}
+      <div className="flex flex-wrap items-center gap-3 mb-3 text-xs text-gray-600 no-print">
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block"/>Fuera de rango</span>
         <span>Temp MÁX: <strong>30°C</strong> · Humedad MÁX: <strong>70%</strong></span>
-        <span className="inline-flex items-center gap-1 ml-4"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Día confirmado</span>
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"/>Día confirmado</span>
       </div>
 
-      <table className="w-full border-collapse text-sm min-w-[960px]">
-        <thead>
-          <tr>
-            <th className={thCls} rowSpan={2}>DÍA</th>
-            <th className={thCls} colSpan={3}>TEMPERATURA (°C) — MÁX 30°C</th>
-            <th className={thCls} colSpan={3}>HUMEDAD (%) — MÁX 70%</th>
-            <th className={thCls} rowSpan={2}>NOMBRE / FIRMA<br/>RESPONSABLE</th>
-            <th className={thCls} rowSpan={2}>OBSERVACIONES</th>
-            <th className={`${thCls} no-print`} rowSpan={2}>✓</th>
-          </tr>
-          <tr>
-            <th className={thCls}>MAÑANA</th>
-            <th className={thCls}>TARDE</th>
-            <th className={thCls}>PROM</th>
-            <th className={thCls}>MAÑANA</th>
-            <th className={thCls}>TARDE</th>
-            <th className={thCls}>PROM</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e, i) => {
-            const tProm = calcProm(e.tempManana, e.tempTarde);
-            const hProm = calcProm(e.humManana, e.humTarde);
-            const alert = rowAlert(e);
-            const locked = lockedDays.has(e.dia);
-            const rowBg = locked
-              ? 'bg-gray-50'
-              : alert
-              ? 'bg-red-50'
-              : i % 2 === 0
-              ? 'bg-white'
-              : 'bg-blue-50/30';
-            return (
-              <tr key={e.dia} className={rowBg}>
-                <td className={`${tdCls} text-center font-medium text-blue-800 w-10`}>{e.dia}</td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e.tempManana))} w-20`}>
-                  {locked ? (
-                    <span className="block text-center text-sm px-1">{e.tempManana}</span>
-                  ) : (
-                    <input className={inputCls} type="number" step="0.1" value={e.tempManana}
-                      onChange={ev => update(i, 'tempManana', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e.tempTarde))} w-20`}>
-                  {locked ? (
-                    <span className="block text-center text-sm px-1">{e.tempTarde}</span>
-                  ) : (
-                    <input className={inputCls} type="number" step="0.1" value={e.tempTarde}
-                      onChange={ev => update(i, 'tempTarde', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(tProm))} w-20 text-center text-gray-700`}>
-                  {tProm}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(e.humManana))} w-20`}>
-                  {locked ? (
-                    <span className="block text-center text-sm px-1">{e.humManana}</span>
-                  ) : (
-                    <input className={inputCls} type="number" step="0.1" value={e.humManana}
-                      onChange={ev => update(i, 'humManana', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(e.humTarde))} w-20`}>
-                  {locked ? (
-                    <span className="block text-center text-sm px-1">{e.humTarde}</span>
-                  ) : (
-                    <input className={inputCls} type="number" step="0.1" value={e.humTarde}
-                      onChange={ev => update(i, 'humTarde', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(hProm))} w-20 text-center text-gray-700`}>
-                  {hProm}
-                </td>
-                <td className={`${tdCls}`}>
-                  {locked ? (
-                    <span className="block text-sm px-1">{e.nombre}</span>
-                  ) : (
-                    <input className={textInputCls} value={e.nombre}
-                      onChange={ev => update(i, 'nombre', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls}`}>
-                  {locked ? (
-                    <span className="block text-sm px-1">{e.observaciones}</span>
-                  ) : (
-                    <input className={textInputCls} value={e.observaciones}
-                      onChange={ev => update(i, 'observaciones', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} text-center no-print w-10`}>
+      {/* ── MOBILE: card per day ── */}
+      <div className="md:hidden space-y-2 no-print">
+        {entries.map((e, i) => {
+          const tProm = calcProm(e.tempManana, e.tempTarde);
+          const hProm = calcProm(e.humManana, e.humTarde);
+          const locked = lockedDays.has(e.dia);
+          const alert = rowAlert(e);
+          const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : 'bg-white border-teal-100';
+          return (
+            <div key={e.dia} className={`rounded-xl border ${cardBg} overflow-hidden`}>
+              {/* Day header */}
+              <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : 'bg-teal-50'}`}>
+                <span className="font-bold text-teal-900 text-base">Día {e.dia}</span>
+                <div className="flex items-center gap-2">
+                  {alert && !locked && <span className="text-xs text-red-600 font-semibold">⚠ Fuera de rango</span>}
+                  {locked && <span className="text-xs text-gray-500">Confirmado</span>}
                   <button
                     onClick={() => toggleLock(e.dia)}
-                    title={locked ? 'Clic para editar' : 'Confirmar día'}
-                    className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-green-600'}`}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${locked ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-teal-600 text-white active:bg-teal-700'}`}
                   >
-                    {locked ? '🔒' : '✓'}
+                    {locked ? '🔒 Editar' : '✓ Confirmar'}
                   </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="bg-blue-100 font-semibold">
-            <td className={`${tdCls} text-center text-xs font-bold text-blue-900`}>PROM.<br/>MES</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp10(avgTempM))}`}>{avgTempM}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp10(avgTempT))}`}>{avgTempT}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp10(avgTempP))}`}>{avgTempP}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumM))}`}>{avgHumM}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumT))}`}>{avgHumT}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumP))}`}>{avgHumP}</td>
-            <td className={tdCls}></td>
-            <td className={tdCls}></td>
-            <td className={`${tdCls} no-print`}></td>
-          </tr>
-        </tfoot>
-      </table>
+                </div>
+              </div>
 
-      {/* Footer fields */}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {(['revisadoPor', 'cargo', 'fecha'] as const).map(k => (
-          <div key={k} className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
-              {k === 'revisadoPor' ? 'Revisado por' : k === 'cargo' ? 'Cargo' : 'Fecha'}
-            </label>
-            <input
-              className="border border-blue-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={footer[k]}
-              onChange={e => onFooterChange({ ...footer, [k]: e.target.value })}
-              type={k === 'fecha' ? 'date' : 'text'}
-            />
+              <div className="px-4 py-3 space-y-3">
+                {/* Temperatura */}
+                <div>
+                  <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-1.5">Temperatura (°C) — MÁX 30°C</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[['Mañana', 'tempManana', isOutOfRangeTemp10(e.tempManana)], ['Tarde', 'tempTarde', isOutOfRangeTemp10(e.tempTarde)], ['Prom', null, isOutOfRangeTemp10(tProm)]].map(([label, field, oor]) => (
+                      <div key={label as string} className={`rounded-lg p-2 text-center ${oor ? 'bg-red-100' : 'bg-gray-50'}`}>
+                        <p className="text-xs text-gray-500 mb-1">{label as string}</p>
+                        {field && !locked ? (
+                          <input type="number" step="0.1" value={e[field as keyof DailyEntry]}
+                            onChange={ev => update(i, field as keyof DailyEntry, ev.target.value)}
+                            className={`w-full text-center text-base font-semibold bg-transparent focus:outline-none ${oor ? 'text-red-700' : 'text-gray-800'}`}
+                            inputMode="decimal"
+                          />
+                        ) : (
+                          <p className={`text-base font-semibold ${oor ? 'text-red-700' : 'text-gray-800'}`}>{field ? e[field as keyof DailyEntry] : tProm}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Humedad */}
+                <div>
+                  <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-1.5">Humedad (%) — MÁX 70%</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[['Mañana', 'humManana', isOutOfRangeHum10(e.humManana)], ['Tarde', 'humTarde', isOutOfRangeHum10(e.humTarde)], ['Prom', null, isOutOfRangeHum10(hProm)]].map(([label, field, oor]) => (
+                      <div key={label as string} className={`rounded-lg p-2 text-center ${oor ? 'bg-red-100' : 'bg-gray-50'}`}>
+                        <p className="text-xs text-gray-500 mb-1">{label as string}</p>
+                        {field && !locked ? (
+                          <input type="number" step="0.1" value={e[field as keyof DailyEntry]}
+                            onChange={ev => update(i, field as keyof DailyEntry, ev.target.value)}
+                            className={`w-full text-center text-base font-semibold bg-transparent focus:outline-none ${oor ? 'text-red-700' : 'text-gray-800'}`}
+                            inputMode="decimal"
+                          />
+                        ) : (
+                          <p className={`text-base font-semibold ${oor ? 'text-red-700' : 'text-gray-800'}`}>{field ? e[field as keyof DailyEntry] : hProm}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Nombre y Observaciones */}
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Nombre / Firma responsable</p>
+                    {locked ? (
+                      <p className="text-sm text-gray-700 px-2 py-1.5 bg-gray-50 rounded-lg">{e.nombre || '—'}</p>
+                    ) : (
+                      <input value={e.nombre} onChange={ev => update(i, 'nombre', ev.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                        placeholder="Nombre del responsable" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Observaciones</p>
+                    {locked ? (
+                      <p className="text-sm text-gray-700 px-2 py-1.5 bg-gray-50 rounded-lg">{e.observaciones || '—'}</p>
+                    ) : (
+                      <input value={e.observaciones} onChange={ev => update(i, 'observaciones', ev.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                        placeholder="Observaciones" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Monthly avg mobile */}
+        <div className="rounded-xl bg-teal-700 text-white p-4">
+          <p className="text-xs font-bold uppercase tracking-wide mb-2">Promedio del mes</p>
+          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div><p className="text-teal-200 text-xs">T. Mañana</p><p className="font-bold">{avgTempM}</p></div>
+            <div><p className="text-teal-200 text-xs">T. Tarde</p><p className="font-bold">{avgTempT}</p></div>
+            <div><p className="text-teal-200 text-xs">T. Prom</p><p className="font-bold">{avgTempP}</p></div>
+            <div><p className="text-teal-200 text-xs">H. Mañana</p><p className="font-bold">{avgHumM}</p></div>
+            <div><p className="text-teal-200 text-xs">H. Tarde</p><p className="font-bold">{avgHumT}</p></div>
+            <div><p className="text-teal-200 text-xs">H. Prom</p><p className="font-bold">{avgHumP}</p></div>
           </div>
-        ))}
+        </div>
       </div>
+
+      {/* ── DESKTOP: table ── */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full border-collapse text-sm min-w-[960px]">
+          <thead>
+            <tr>
+              <th className={thCls} rowSpan={2}>DÍA</th>
+              <th className={thCls} colSpan={3}>TEMPERATURA (°C) — MÁX 30°C</th>
+              <th className={thCls} colSpan={3}>HUMEDAD (%) — MÁX 70%</th>
+              <th className={thCls} rowSpan={2}>NOMBRE / FIRMA<br/>RESPONSABLE</th>
+              <th className={thCls} rowSpan={2}>OBSERVACIONES</th>
+              <th className={`${thCls} no-print`} rowSpan={2}>✓</th>
+            </tr>
+            <tr>
+              {['MAÑANA','TARDE','PROM','MAÑANA','TARDE','PROM'].map((h,i) => <th key={i} className={thCls}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e, i) => {
+              const tProm = calcProm(e.tempManana, e.tempTarde);
+              const hProm = calcProm(e.humManana, e.humTarde);
+              const alert = rowAlert(e);
+              const locked = lockedDays.has(e.dia);
+              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              return (
+                <tr key={e.dia} className={rowBg}>
+                  <td className={`${tdCls} text-center font-medium text-teal-800 w-10`}>{e.dia}</td>
+                  {(['tempManana','tempTarde'] as const).map(f => (
+                    <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e[f]))} w-20`}>
+                      {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
+                        : <input className={inputNum} type="number" step="0.1" value={e[f]} onChange={ev => update(i, f, ev.target.value)} />}
+                    </td>
+                  ))}
+                  <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(tProm))} w-20 text-center text-gray-700`}>{tProm}</td>
+                  {(['humManana','humTarde'] as const).map(f => (
+                    <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeHum10(e[f]))} w-20`}>
+                      {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
+                        : <input className={inputNum} type="number" step="0.1" value={e[f]} onChange={ev => update(i, f, ev.target.value)} />}
+                    </td>
+                  ))}
+                  <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(hProm))} w-20 text-center text-gray-700`}>{hProm}</td>
+                  <td className={tdCls}>
+                    {locked ? <span className="block text-sm px-1">{e.nombre}</span>
+                      : <input className={inputTxt} value={e.nombre} onChange={ev => update(i, 'nombre', ev.target.value)} />}
+                  </td>
+                  <td className={tdCls}>
+                    {locked ? <span className="block text-sm px-1">{e.observaciones}</span>
+                      : <input className={inputTxt} value={e.observaciones} onChange={ev => update(i, 'observaciones', ev.target.value)} />}
+                  </td>
+                  <td className={`${tdCls} text-center no-print w-10`}>
+                    <button onClick={() => toggleLock(e.dia)} title={locked ? 'Clic para editar' : 'Confirmar día'}
+                      className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-teal-600'}`}>
+                      {locked ? '🔒' : '✓'}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="bg-teal-100 font-semibold">
+              <td className={`${tdCls} text-center text-xs font-bold text-teal-900`}>PROM.<br/>MES</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp10(avgTempM))}`}>{avgTempM}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp10(avgTempT))}`}>{avgTempT}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp10(avgTempP))}`}>{avgTempP}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumM))}`}>{avgHumM}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumT))}`}>{avgHumT}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeHum10(avgHumP))}`}>{avgHumP}</td>
+              <td className={tdCls}/><td className={tdCls}/><td className={`${tdCls} no-print`}/>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <FooterFields footer={footer} onFooterChange={onFooterChange} />
     </div>
   );
 }
 
-// ─── Anexo 11 Table ────────────────────────────────────────────────────────────
+// ─── Anexo 11 ─────────────────────────────────────────────────────────────────
 
 interface Anexo11TableProps {
   entries: RefrigDailyEntry[];
@@ -236,17 +301,13 @@ interface Anexo11TableProps {
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
-  return (
-    isOutOfRangeTemp11(e.tempManana) ||
-    isOutOfRangeTemp11(e.tempTarde) ||
-    isOutOfRangeTemp11(calcProm(e.tempManana, e.tempTarde))
-  );
+  return isOutOfRangeTemp11(e.tempManana) || isOutOfRangeTemp11(e.tempTarde) ||
+    isOutOfRangeTemp11(calcProm(e.tempManana, e.tempTarde));
 }
 
 export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo11TableProps) {
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
-    const next = entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e);
-    onChange(next);
+    onChange(entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e));
   };
 
   const toggleLock = (dia: number) => {
@@ -254,146 +315,167 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
     if (isLocked) {
       if (!isAdmin) { alert('Solo un administrador puede desbloquear un día confirmado.'); return; }
       if (!window.confirm('¿Deseas editar este día?')) return;
-      const next = new Set(lockedDays);
-      next.delete(dia);
-      onLockedDaysChange(next);
+      const next = new Set(lockedDays); next.delete(dia); onLockedDaysChange(next);
     } else {
-      // Auto-fill nombre with current user when confirming
       const idx = entries.findIndex(e => e.dia === dia);
       if (idx !== -1 && currentUserName) {
-        const next = entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e);
-        onChange(next);
+        onChange(entries.map((e, i) => i === idx ? { ...e, nombre: currentUserName } : e));
       }
-      const next = new Set(lockedDays);
-      next.add(dia);
-      onLockedDaysChange(next);
+      const next = new Set(lockedDays); next.add(dia); onLockedDaysChange(next);
     }
   };
-
-  const inputCls = 'w-full bg-transparent text-center text-sm focus:outline-none focus:bg-blue-50 rounded px-1 py-0.5';
-  const textInputCls = 'w-full bg-transparent text-sm focus:outline-none focus:bg-blue-50 rounded px-1 py-0.5';
 
   const avgTempM = monthlyAverage(entries.map(e => e.tempManana));
   const avgTempT = monthlyAverage(entries.map(e => e.tempTarde));
   const avgTempP = monthlyAverage(entries.map(e => calcProm(e.tempManana, e.tempTarde)));
 
-  const thCls = 'px-2 py-2 text-xs font-bold text-blue-900 bg-blue-50 border border-blue-200 text-center whitespace-nowrap';
-  const tdCls = 'border border-blue-100 px-1 py-0.5';
+  const inputNum = 'w-full bg-transparent text-center text-sm focus:outline-none focus:bg-teal-50 rounded px-1 py-1';
+  const inputTxt = 'w-full bg-transparent text-sm focus:outline-none focus:bg-teal-50 rounded px-1 py-1';
+  const thCls = 'px-2 py-2 text-xs font-bold text-teal-900 bg-teal-50 border border-teal-200 text-center whitespace-nowrap';
+  const tdCls = 'border border-teal-100 px-1 py-0.5';
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex items-center gap-4 mb-2 text-xs text-gray-600 no-print">
-        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block"></span> Fuera de rango</span>
+    <div>
+      <div className="flex flex-wrap items-center gap-3 mb-3 text-xs text-gray-600 no-print">
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 inline-block"/>Fuera de rango</span>
         <span>Rango temp: <strong>2–8°C</strong></span>
-        <span className="inline-flex items-center gap-1 ml-4"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"></span> Día confirmado</span>
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-300 inline-block"/>Día confirmado</span>
       </div>
 
-      <table className="w-full border-collapse text-sm min-w-[750px]">
-        <thead>
-          <tr>
-            <th className={thCls} rowSpan={2}>DÍA</th>
-            <th className={thCls} colSpan={3}>TEMPERATURA DE REFRIGERACIÓN (°C) — RANGO 2–8°C</th>
-            <th className={thCls} rowSpan={2}>NOMBRE / FIRMA<br/>RESPONSABLE</th>
-            <th className={thCls} rowSpan={2}>OBSERVACIONES</th>
-            <th className={`${thCls} no-print`} rowSpan={2}>✓</th>
-          </tr>
-          <tr>
-            <th className={thCls}>MAÑANA</th>
-            <th className={thCls}>TARDE</th>
-            <th className={thCls}>PROM</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e, i) => {
-            const tProm = calcProm(e.tempManana, e.tempTarde);
-            const alert = rowAlert11(e);
-            const locked = lockedDays.has(e.dia);
-            const rowBg = locked
-              ? 'bg-gray-50'
-              : alert
-              ? 'bg-red-50'
-              : i % 2 === 0
-              ? 'bg-white'
-              : 'bg-blue-50/30';
-            return (
-              <tr key={e.dia} className={rowBg}>
-                <td className={`${tdCls} text-center font-medium text-blue-800 w-10`}>{e.dia}</td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e.tempManana))} w-24`}>
-                  {locked ? (
-                    <span className="block text-center text-sm px-1">{e.tempManana}</span>
-                  ) : (
-                    <input className={inputCls} type="number" step="0.1" value={e.tempManana}
-                      onChange={ev => update(i, 'tempManana', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e.tempTarde))} w-24`}>
-                  {locked ? (
-                    <span className="block text-center text-sm px-1">{e.tempTarde}</span>
-                  ) : (
-                    <input className={inputCls} type="number" step="0.1" value={e.tempTarde}
-                      onChange={ev => update(i, 'tempTarde', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(tProm))} w-24 text-center text-gray-700`}>
-                  {tProm}
-                </td>
-                <td className={`${tdCls}`}>
-                  {locked ? (
-                    <span className="block text-sm px-1">{e.nombre}</span>
-                  ) : (
-                    <input className={textInputCls} value={e.nombre}
-                      onChange={ev => update(i, 'nombre', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls}`}>
-                  {locked ? (
-                    <span className="block text-sm px-1">{e.observaciones}</span>
-                  ) : (
-                    <input className={textInputCls} value={e.observaciones}
-                      onChange={ev => update(i, 'observaciones', ev.target.value)} />
-                  )}
-                </td>
-                <td className={`${tdCls} text-center no-print w-10`}>
-                  <button
-                    onClick={() => toggleLock(e.dia)}
-                    title={locked ? 'Clic para editar' : 'Confirmar día'}
-                    className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-green-600'}`}
-                  >
-                    {locked ? '🔒' : '✓'}
+      {/* ── MOBILE cards ── */}
+      <div className="md:hidden space-y-2 no-print">
+        {entries.map((e, i) => {
+          const tProm = calcProm(e.tempManana, e.tempTarde);
+          const locked = lockedDays.has(e.dia);
+          const alert = rowAlert11(e);
+          const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : 'bg-white border-teal-100';
+          return (
+            <div key={e.dia} className={`rounded-xl border ${cardBg} overflow-hidden`}>
+              <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : 'bg-teal-50'}`}>
+                <span className="font-bold text-teal-900 text-base">Día {e.dia}</span>
+                <div className="flex items-center gap-2">
+                  {alert && !locked && <span className="text-xs text-red-600 font-semibold">⚠ Fuera de rango</span>}
+                  {locked && <span className="text-xs text-gray-500">Confirmado</span>}
+                  <button onClick={() => toggleLock(e.dia)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${locked ? 'bg-gray-200 text-gray-600 active:bg-gray-300' : 'bg-orange-500 text-white active:bg-orange-600'}`}>
+                    {locked ? '🔒 Editar' : '✓ Confirmar'}
                   </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="bg-blue-100 font-semibold">
-            <td className={`${tdCls} text-center text-xs font-bold text-blue-900`}>PROM.<br/>MES</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempM))}`}>{avgTempM}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempT))}`}>{avgTempT}</td>
-            <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempP))}`}>{avgTempP}</td>
-            <td className={tdCls}></td>
-            <td className={tdCls}></td>
-            <td className={`${tdCls} no-print`}></td>
-          </tr>
-        </tfoot>
-      </table>
+                </div>
+              </div>
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {(['revisadoPor', 'cargo', 'fecha'] as const).map(k => (
-          <div key={k} className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
-              {k === 'revisadoPor' ? 'Revisado por' : k === 'cargo' ? 'Cargo' : 'Fecha'}
-            </label>
-            <input
-              className="border border-blue-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={footer[k]}
-              onChange={e => onFooterChange({ ...footer, [k]: e.target.value })}
-              type={k === 'fecha' ? 'date' : 'text'}
-            />
+              <div className="px-4 py-3 space-y-3">
+                <div>
+                  <p className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-1.5">Temperatura Refrigeración (°C) — 2–8°C</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[['Mañana', 'tempManana', isOutOfRangeTemp11(e.tempManana)], ['Tarde', 'tempTarde', isOutOfRangeTemp11(e.tempTarde)], ['Prom', null, isOutOfRangeTemp11(tProm)]].map(([label, field, oor]) => (
+                      <div key={label as string} className={`rounded-lg p-2 text-center ${oor ? 'bg-red-100' : 'bg-gray-50'}`}>
+                        <p className="text-xs text-gray-500 mb-1">{label as string}</p>
+                        {field && !locked ? (
+                          <input type="number" step="0.1" value={e[field as keyof RefrigDailyEntry]}
+                            onChange={ev => update(i, field as keyof RefrigDailyEntry, ev.target.value)}
+                            className={`w-full text-center text-base font-semibold bg-transparent focus:outline-none ${oor ? 'text-red-700' : 'text-gray-800'}`}
+                            inputMode="decimal" />
+                        ) : (
+                          <p className={`text-base font-semibold ${oor ? 'text-red-700' : 'text-gray-800'}`}>{field ? e[field as keyof RefrigDailyEntry] : tProm}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Nombre / Firma responsable</p>
+                    {locked ? <p className="text-sm text-gray-700 px-2 py-1.5 bg-gray-50 rounded-lg">{e.nombre || '—'}</p>
+                      : <input value={e.nombre} onChange={ev => update(i, 'nombre', ev.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                          placeholder="Nombre del responsable" />}
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Observaciones</p>
+                    {locked ? <p className="text-sm text-gray-700 px-2 py-1.5 bg-gray-50 rounded-lg">{e.observaciones || '—'}</p>
+                      : <input value={e.observaciones} onChange={ev => update(i, 'observaciones', ev.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                          placeholder="Observaciones" />}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="rounded-xl bg-orange-500 text-white p-4">
+          <p className="text-xs font-bold uppercase tracking-wide mb-2">Promedio del mes</p>
+          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div><p className="text-orange-100 text-xs">T. Mañana</p><p className="font-bold">{avgTempM}</p></div>
+            <div><p className="text-orange-100 text-xs">T. Tarde</p><p className="font-bold">{avgTempT}</p></div>
+            <div><p className="text-orange-100 text-xs">T. Prom</p><p className="font-bold">{avgTempP}</p></div>
           </div>
-        ))}
+        </div>
       </div>
+
+      {/* ── DESKTOP table ── */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full border-collapse text-sm min-w-[750px]">
+          <thead>
+            <tr>
+              <th className={thCls} rowSpan={2}>DÍA</th>
+              <th className={thCls} colSpan={3}>TEMPERATURA DE REFRIGERACIÓN (°C) — RANGO 2–8°C</th>
+              <th className={thCls} rowSpan={2}>NOMBRE / FIRMA<br/>RESPONSABLE</th>
+              <th className={thCls} rowSpan={2}>OBSERVACIONES</th>
+              <th className={`${thCls} no-print`} rowSpan={2}>✓</th>
+            </tr>
+            <tr>
+              {['MAÑANA','TARDE','PROM'].map((h,i) => <th key={i} className={thCls}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e, i) => {
+              const tProm = calcProm(e.tempManana, e.tempTarde);
+              const alert = rowAlert11(e);
+              const locked = lockedDays.has(e.dia);
+              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              return (
+                <tr key={e.dia} className={rowBg}>
+                  <td className={`${tdCls} text-center font-medium text-teal-800 w-10`}>{e.dia}</td>
+                  {(['tempManana','tempTarde'] as const).map(f => (
+                    <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e[f]))} w-24`}>
+                      {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
+                        : <input className={inputNum} type="number" step="0.1" value={e[f]} onChange={ev => update(i, f, ev.target.value)} />}
+                    </td>
+                  ))}
+                  <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(tProm))} w-24 text-center text-gray-700`}>{tProm}</td>
+                  <td className={tdCls}>
+                    {locked ? <span className="block text-sm px-1">{e.nombre}</span>
+                      : <input className={inputTxt} value={e.nombre} onChange={ev => update(i, 'nombre', ev.target.value)} />}
+                  </td>
+                  <td className={tdCls}>
+                    {locked ? <span className="block text-sm px-1">{e.observaciones}</span>
+                      : <input className={inputTxt} value={e.observaciones} onChange={ev => update(i, 'observaciones', ev.target.value)} />}
+                  </td>
+                  <td className={`${tdCls} text-center no-print w-10`}>
+                    <button onClick={() => toggleLock(e.dia)} title={locked ? 'Clic para editar' : 'Confirmar día'}
+                      className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-orange-500'}`}>
+                      {locked ? '🔒' : '✓'}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="bg-orange-100 font-semibold">
+              <td className={`${tdCls} text-center text-xs font-bold text-orange-900`}>PROM.<br/>MES</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempM))}`}>{avgTempM}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempT))}`}>{avgTempT}</td>
+              <td className={`${tdCls} text-center ${cellCls(isOutOfRangeTemp11(avgTempP))}`}>{avgTempP}</td>
+              <td className={tdCls}/><td className={tdCls}/><td className={`${tdCls} no-print`}/>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <FooterFields footer={footer} onFooterChange={onFooterChange} />
     </div>
   );
 }
