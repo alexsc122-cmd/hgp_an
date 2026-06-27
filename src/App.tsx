@@ -458,23 +458,42 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
         ]);
         if (cancelled) return;
         const mesStr = String(currentMonthNum).padStart(2, '0');
+        const fallbackHeader = { institucion: config.institucion, estrategia: config.estrategia, establecimiento: config.establecimiento, direccion: config.direccion, noEquipo: termo.numero, anio: String(currentYear), mes: mesStr };
         if (isAmbiental) {
           const base = registro as Anexo10Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(currentYear, currentMonthNum);
           const entries = clearUnlockedNombres(rawEntries, locked);
-          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
+          const savedHeader = base?.header;
+          const header = {
+            institucion: savedHeader?.institucion || config.institucion,
+            estrategia: savedHeader?.estrategia || config.estrategia,
+            establecimiento: savedHeader?.establecimiento || config.establecimiento,
+            direccion: savedHeader?.direccion || config.direccion,
+            noEquipo: savedHeader?.noEquipo || termo.numero,
+            anio: savedHeader?.anio || String(currentYear),
+            mes: savedHeader?.mes || mesStr,
+          };
           const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
-          setAnexo10({ ...(base ?? { header, footer }), header, footer, entries });
+          setAnexo10({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays10(locked);
         } else {
           const base = registro as Anexo11Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
           const entries = clearUnlockedNombres(rawEntries, locked);
-          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(currentYear), mes: mesStr }), noEquipo: base?.header?.noEquipo || termo.numero };
+          const savedHeader = base?.header;
+          const header = {
+            institucion: savedHeader?.institucion || config.institucion,
+            estrategia: savedHeader?.estrategia || config.estrategia,
+            establecimiento: savedHeader?.establecimiento || config.establecimiento,
+            direccion: savedHeader?.direccion || config.direccion,
+            noEquipo: savedHeader?.noEquipo || termo.numero,
+            anio: savedHeader?.anio || String(currentYear),
+            mes: savedHeader?.mes || mesStr,
+          };
           const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
-          setAnexo11({ ...(base ?? { header, footer }), header, footer, entries });
+          setAnexo11({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays11(locked);
         }
         setMonthsWithData(mwd);
