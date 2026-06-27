@@ -12,7 +12,7 @@ import {
   fsLoadLockedDays, fsSaveLockedDays,
   fsGetMonthsWithData,
   fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion,
-  fsAuthCreateUser, fsAuthLogout,
+  fsAuthCreateUser, fsAuthLogout, fsSendPasswordReset,
 } from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -143,6 +143,20 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
       setEditUser(null);
     } catch {
       alert('Error al guardar usuario.');
+    }
+  };
+
+  const handleResetPassword = async (u: Usuario) => {
+    if (!u.email || u.email.endsWith('@vivens.local')) {
+      alert(`El usuario "${u.nombre}" no tiene un correo real configurado. Edítalo y agrega un correo válido.`);
+      return;
+    }
+    if (!confirm(`¿Enviar email de recuperación de contraseña a ${u.email}?`)) return;
+    try {
+      await fsSendPasswordReset(u.email);
+      alert(`✅ Email enviado a ${u.email}. El usuario recibirá un link para restablecer su contraseña.`);
+    } catch {
+      alert('Error al enviar el email. Verifica que el correo sea válido.');
     }
   };
 
@@ -289,6 +303,7 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
                       <td className="px-4 py-3 text-gray-400 text-xs">{new Date(u.creadoEn).toLocaleDateString('es-EC')}</td>
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => { setEditUser(u); setUserModalOpen(true); }} className="text-teal-600 hover:text-teal-800 text-xs font-semibold mr-3">Editar</button>
+                        <button onClick={() => handleResetPassword(u)} className="text-orange-500 hover:text-orange-700 text-xs font-semibold mr-3" title="Enviar email de recuperación">🔑 Reset</button>
                         <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
                       </td>
                     </tr>
