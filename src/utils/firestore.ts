@@ -7,7 +7,6 @@ import {
   signInWithEmailAndPassword,
   deleteUser,
   signOut,
-  fetchSignInMethodsForEmail,
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -30,10 +29,12 @@ export async function fsAuthLogout(): Promise<void> {
 }
 
 export async function fsAuthCreateUser(usuario: string, password: string): Promise<void> {
-  const email = toAuthEmail(usuario);
-  const methods = await fetchSignInMethodsForEmail(auth, email);
-  if (methods.length === 0) {
-    await createUserWithEmailAndPassword(auth, email, password);
+  try {
+    await createUserWithEmailAndPassword(auth, toAuthEmail(usuario), password);
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code;
+    // User already exists in Firebase Auth — that's fine
+    if (code !== 'auth/email-already-in-use') throw err;
   }
 }
 
