@@ -4,6 +4,7 @@ import { setSession } from '../utils/storage';
 import {
   fsAuthLogin, fsAuthCreateUser,
   fsGetUsuarioByLogin, fsLoadUsuarios, fsSaveUsuario,
+  toFallbackEmail,
 } from '../utils/firestore';
 
 interface Props {
@@ -21,43 +22,59 @@ export default function LoginScreen({ onLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      // Auto-create admin if no users exist in Firestore
-      const allUsers = await fsLoadUsuarios();
-      if (allUsers.length === 0) {
-        const admin: Usuario = {
-          id: '1', nombre: 'Administrador', usuario: 'admin',
-          email: 'admin@vivens.local', password: 'admin123',
-          rol: 'admin', termosAsignados: [],
-          creadoEn: new Date().toISOString(),
-        };
-        await fsSaveUsuario(admin);
-        await fsAuthCreateUser('admin@vivens.local', 'admin123');
+      // 1. Find user profile in Firestore
+      let found = await fsGetUsuarioByLogin(usuario.trim());
+
+      // Auto-bootstrap admin on first run (only if no user found and username is 'admin')
+      if (!found && usuario.trim() === 'admin') {
+        const allUsers = await fsLoadUsuarios();
+        if (allUsers.length === 0) {
+          const admin: Usuario = {
+            id: '1', nombre: 'Administrador', usuario: 'admin',
+            email: 'admin@vivens.local', password: 'admin123',
+            rol: 'admin', termosAsignados: [],
+            creadoEn: new Date().toISOString(),
+          };
+          await fsSaveUsuario(admin);
+          await fsAuthCreateUser('admin@vivens.local', 'admin123');
+          found = admin;
+        }
       }
 
-      // Find user profile in Firestore by username
-      const found = await fsGetUsuarioByLogin(usuario.trim());
       if (!found) {
         setError('Usuario o contraseña incorrectos.');
         setLoading(false);
         return;
       }
 
-      // Ensure Firebase Auth account exists (migration for users created before Firebase Auth)
-      const authEmail = found.email?.trim() || `${found.usuario.toLowerCase()}@vivens.local`;
-      await fsAuthCreateUser(authEmail, found.password);
-
-      // Firebase Auth validates the password (source of truth for authentication)
-      await fsAuthLogin(usuario.trim(), password);
+      // 2. Firebase Auth validates the password (source of truth)
+      const authEmail = found.email?.trim() || toFallbackEmail(found.usuario);
+      await fsAuthLogin(authEmail, password);
 
       setSession(found);
       onLogin(found);
     } catch (err: unknown) {
-      const code = (err as { code?: string })?.code ?? 'desconocido';
-      const msg = (err as { message?: string })?.message ?? '';
+      const code = (err as { code?: string })?.code ?? '';
       if (code === 'auth/too-many-requests') {
         setError('Demasiados intentos fallidos. Intenta más tarde.');
+      } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        setError('Usuario o contraseña incorrectos.');
+      } else if (code === 'auth/user-not-found') {
+        // Legacy user without Firebase Auth account — create it on first login
+        try {
+          const found2 = await fsGetUsuarioByLogin(usuario.trim());
+          if (found2) {
+            const authEmail = found2.email?.trim() || toFallbackEmail(found2.usuario);
+            await fsAuthCreateUser(authEmail, found2.password);
+            await fsAuthLogin(authEmail, password);
+            setSession(found2);
+            onLogin(found2);
+            return;
+          }
+        } catch { /* fall through */ }
+        setError('Usuario o contraseña incorrectos.');
       } else {
-        setError(`Error [${code}]: ${msg}`);
+        setError('Error al iniciar sesión. Verifica tu conexión.');
       }
     }
     setLoading(false);

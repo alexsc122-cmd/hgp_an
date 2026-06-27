@@ -17,14 +17,11 @@ import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data } from '../types';
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-function toFallbackEmail(usuario: string): string {
+export function toFallbackEmail(usuario: string): string {
   return `${usuario.trim().toLowerCase()}@vivens.local`;
 }
 
-export async function fsAuthLogin(usuario: string, password: string): Promise<void> {
-  // Look up real email from Firestore first
-  const found = await fsGetUsuarioByLogin(usuario);
-  const email = found?.email?.trim() || toFallbackEmail(usuario);
+export async function fsAuthLogin(email: string, password: string): Promise<void> {
   await signInWithEmailAndPassword(auth, email, password);
 }
 
