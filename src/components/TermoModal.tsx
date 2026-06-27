@@ -45,35 +45,35 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-blue-100 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-blue-900">
+        <div className="px-6 py-4 border-b border-teal-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-teal-900">
             {initial ? 'Editar equipo' : 'Agregar equipo'}
           </h2>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Nombre del equipo *</label>
+            <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Nombre del equipo *</label>
             <input
               required
-              className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Ej. Termohigrómetro 1, Cuarto Frío Bodega"
               value={nombre}
               onChange={e => setNombre(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Número de equipo</label>
+            <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Número de equipo</label>
             <input
-              className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Ej. TH-001"
               value={numero}
               onChange={e => setNumero(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Tipo de registro</label>
-            <label className="flex items-center gap-3 p-3 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+            <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Tipo de registro</label>
+            <label className="flex items-center gap-3 p-3 border border-teal-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
               <input
                 type="radio"
                 name="tipo"
@@ -83,7 +83,7 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
                 className="text-blue-600"
               />
               <div>
-                <div className="text-sm font-semibold text-blue-900">Temperatura Ambiente</div>
+                <div className="text-sm font-semibold text-teal-900">Temperatura Ambiente</div>
                 <div className="text-xs text-gray-500">Anexo 10 — Temperatura y Humedad Ambiental</div>
               </div>
             </label>
@@ -103,7 +103,7 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
             </label>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Ubicación</label>
+            <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ubicación</label>
             {ubicaciones.length === 0 ? (
               <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                 No hay ubicaciones creadas. El administrador debe crearlas primero desde la pestaña Ubicaciones.
@@ -111,7 +111,7 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
             ) : (
               <select
                 required
-                className="border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
                 value={ubicacion}
                 onChange={e => setUbicacion(e.target.value)}
               >
@@ -125,7 +125,7 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow"
+              className="flex-1 bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow"
             >
               Guardar
             </button>

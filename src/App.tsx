@@ -67,14 +67,14 @@ function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-blue-900">Ubicaciones</h1>
+          <h1 className="text-2xl font-bold text-teal-900">Ubicaciones</h1>
           <p className="text-sm text-gray-500 mt-0.5">Define los lugares donde se instalan los equipos</p>
         </div>
       </div>
       <div className="bg-white rounded-xl shadow-sm p-6 max-w-lg">
         <div className="flex gap-2 mb-4">
           <input
-            className="flex-1 border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="flex-1 border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
             placeholder="Ej. Bodega Principal, Sala de Almacenamiento"
             value={nueva}
             onChange={e => setNueva(e.target.value)}
@@ -83,7 +83,7 @@ function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
           <button
             onClick={handleAdd}
             disabled={loading || !nueva.trim()}
-            className="bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+            className="bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
           >
             Agregar
           </button>
@@ -155,18 +155,25 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-slate-100">
       {/* Nav */}
-      <nav className="bg-blue-900 text-white px-6 py-3 flex items-center gap-3 shadow-lg">
-        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm">R</div>
-        <div className="flex-1">
-          <div className="font-bold text-base leading-tight">RPIS — Control de Temperatura y Humedad</div>
-          <div className="text-xs text-blue-200">Almacén Farmacéutico — Ecuador</div>
+      <nav className="text-white px-6 py-3 flex items-center gap-3 shadow-lg" style={{ background: 'linear-gradient(135deg, #0f766e, #0d9488)' }}>
+        {/* Vivens logo mark mini */}
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+          <svg width="20" height="20" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="22" cy="24" r="12" fill="#f97316" fillOpacity="0.9"/>
+            <circle cx="34" cy="24" r="12" fill="white" fillOpacity="0.7"/>
+            <circle cx="28" cy="34" r="12" fill="#fb923c" fillOpacity="0.6"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-base leading-tight">VIVENS — Control de Temperatura y Humedad</div>
+          <div className="text-xs text-teal-100">Clínica Renal El Puyo — Ecuador</div>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <div className="text-xs font-semibold text-white">{currentUser.nombre}</div>
-            <div className="text-xs text-blue-300">{currentUser.rol === 'admin' ? '👑 Administrador' : '👤 Operador'}</div>
+            <div className="text-xs text-teal-200">{currentUser.rol === 'admin' ? '👑 Administrador' : '👤 Operador'}</div>
           </div>
           <button
             onClick={onLogout}
@@ -185,7 +192,7 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
                 key={t}
                 onClick={() => setTab(t as typeof tab)}
                 className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
-                  tab === t ? 'border-blue-700 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  tab === t ? 'border-teal-600 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
                 {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : t === 'usuarios' ? '👥 Usuarios' : '📍 Ubicaciones'}
@@ -205,7 +212,7 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
           <>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-blue-900">Equipos registrados</h1>
+                <h1 className="text-2xl font-bold text-teal-900">Equipos registrados</h1>
                 <p className="text-sm text-gray-500 mt-0.5">
                   {termos.length === 0 ? 'Sin equipos aún' : `${termos.length} equipo${termos.length !== 1 ? 's' : ''}`}
                 </p>
@@ -213,7 +220,7 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
               {isAdmin && (
                 <button
                   onClick={onAdd}
-                  className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                  className="flex items-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
                 >
                   ➕ Agregar equipo
                 </button>
@@ -221,11 +228,11 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
             </div>
             {termos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4 text-3xl">🌡️</div>
-                <h2 className="text-lg font-bold text-blue-900 mb-1">No hay equipos registrados</h2>
+                <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4 text-3xl">🌡️</div>
+                <h2 className="text-lg font-bold text-teal-900 mb-1">No hay equipos registrados</h2>
                 <p className="text-sm text-gray-500 mb-6 max-w-xs">Agrega tu primer termohigrómetro para comenzar.</p>
                 {isAdmin && (
-                  <button onClick={onAdd} className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shadow">
+                  <button onClick={onAdd} className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shadow">
                     Agregar primer equipo
                   </button>
                 )}
@@ -245,19 +252,19 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
           <>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-blue-900">Usuarios del sistema</h1>
+                <h1 className="text-2xl font-bold text-teal-900">Usuarios del sistema</h1>
                 <p className="text-sm text-gray-500 mt-0.5">{usuarios.length} usuario{usuarios.length !== 1 ? 's' : ''}</p>
               </div>
               <button
                 onClick={() => { setEditUser(null); setUserModalOpen(true); }}
-                className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                className="flex items-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors shadow-sm"
               >
                 ➕ Nuevo usuario
               </button>
             </div>
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-blue-50 text-blue-900 text-xs font-semibold uppercase tracking-wide">
+                <thead className="bg-teal-50 text-teal-900 text-xs font-semibold uppercase tracking-wide">
                   <tr>
                     <th className="px-4 py-3 text-left">Nombre</th>
                     <th className="px-4 py-3 text-left">Usuario</th>
@@ -272,13 +279,13 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
                       <td className="px-4 py-3 font-medium text-gray-800">{u.nombre}</td>
                       <td className="px-4 py-3 font-mono text-gray-600">{u.usuario}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}`}>
                           {u.rol === 'admin' ? '👑 Admin' : '👤 Operador'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{new Date(u.creadoEn).toLocaleDateString('es-EC')}</td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => { setEditUser(u); setUserModalOpen(true); }} className="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3">Editar</button>
+                        <button onClick={() => { setEditUser(u); setUserModalOpen(true); }} className="text-teal-600 hover:text-teal-800 text-xs font-semibold mr-3">Editar</button>
                         <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
                       </td>
                     </tr>

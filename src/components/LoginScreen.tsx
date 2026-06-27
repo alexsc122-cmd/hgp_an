@@ -16,7 +16,6 @@ export default function LoginScreen({ onLogin }: Props) {
     e.preventDefault();
     setError('');
     try {
-      // Auto-create admin if no users exist
       const allUsers = await fsLoadUsuarios();
       if (allUsers.length === 0) {
         const admin: import('../types').Usuario = {
@@ -39,13 +38,22 @@ export default function LoginScreen({ onLogin }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #0891b2 100%)' }}>
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-blue-800 px-8 py-6 text-center">
-          <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 text-3xl">🌡️</div>
-          <h1 className="text-white font-bold text-lg leading-tight">RPIS</h1>
-          <p className="text-blue-200 text-xs mt-1">Control de Temperatura y Humedad</p>
+        <div className="px-8 py-7 text-center" style={{ background: 'linear-gradient(135deg, #0f766e, #0d9488)' }}>
+          {/* Vivens logo mark */}
+          <div className="flex items-center justify-center mb-4">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="28" cy="28" r="28" fill="white" fillOpacity="0.15"/>
+              <circle cx="22" cy="24" r="10" fill="#f97316" fillOpacity="0.9"/>
+              <circle cx="34" cy="24" r="10" fill="white" fillOpacity="0.7"/>
+              <circle cx="28" cy="33" r="10" fill="#fb923c" fillOpacity="0.6"/>
+            </svg>
+          </div>
+          <h1 className="text-white font-bold text-xl leading-tight tracking-wide">VIVENS</h1>
+          <p className="text-teal-100 text-xs mt-1 font-medium">Clínica Renal El Puyo</p>
+          <p className="text-teal-200 text-xs mt-0.5">Control de Temperatura y Humedad</p>
         </div>
 
         {/* Form */}
@@ -56,7 +64,7 @@ export default function LoginScreen({ onLogin }: Props) {
               type="text"
               value={usuario}
               onChange={e => { setUsuario(e.target.value); setError(''); }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Ingresa tu usuario"
               autoFocus
             />
@@ -67,7 +75,7 @@ export default function LoginScreen({ onLogin }: Props) {
               type="password"
               value={password}
               onChange={e => { setPassword(e.target.value); setError(''); }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="••••••••"
             />
           </div>
@@ -76,7 +84,8 @@ export default function LoginScreen({ onLogin }: Props) {
           )}
           <button
             type="submit"
-            className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+            className="w-full text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow"
+            style={{ background: 'linear-gradient(135deg, #0f766e, #0d9488)' }}
           >
             Ingresar
           </button>
@@ -85,6 +94,7 @@ export default function LoginScreen({ onLogin }: Props) {
           </p>
         </form>
       </div>
+      <p className="mt-6 text-teal-100 text-xs opacity-70">© Clínica Renal El Puyo – VIVENS</p>
     </div>
   );
 }

@@ -53,10 +53,10 @@ export default function Sidebar({
       {!isOpen && (
         <button
           onClick={onToggle}
-          className="fixed top-16 left-3 z-40 p-2 rounded-lg bg-white border border-blue-200 shadow-md hover:bg-blue-50 transition-colors no-print"
+          className="fixed top-16 left-3 z-40 p-2 rounded-lg bg-white border border-teal-200 shadow-md hover:bg-teal-50 transition-colors no-print"
           title="Mostrar panel"
         >
-          <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
@@ -72,25 +72,25 @@ export default function Sidebar({
 
       {/* Sidebar panel */}
       <aside
-        className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-white border-r border-blue-100 shadow-lg transition-transform duration-300 no-print ${
+        className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-white border-r border-teal-100 shadow-lg transition-transform duration-300 no-print ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ width: 256, paddingTop: 56 }}
       >
         <div className="flex flex-col h-full overflow-hidden">
           {/* Back button + equipo info */}
-          <div className="px-4 pt-4 pb-3 border-b border-blue-50">
+          <div className="px-4 pt-4 pb-3 border-b border-teal-50">
             {/* Top row: back button + close sidebar button */}
             <div className="flex items-center justify-between mb-3">
               <button
                 onClick={onBack}
-                className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+                className="flex items-center gap-1.5 text-teal-600 hover:text-blue-800 text-sm font-medium transition-colors"
               >
                 ← Equipos
               </button>
               <button
                 onClick={onToggle}
-                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-400 hover:text-blue-700 transition-colors"
+                className="p-1.5 rounded-lg hover:bg-teal-50 text-teal-400 hover:text-teal-700 transition-colors"
                 title="Ocultar panel"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -101,13 +101,13 @@ export default function Sidebar({
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  isAmbiental ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'
+                  isAmbiental ? 'bg-teal-100 text-teal-800' : 'bg-orange-100 text-orange-700'
                 }`}
               >
                 {isAmbiental ? 'Ambiente' : 'Refrigeración'}
               </span>
             </div>
-            <h2 className="font-bold text-blue-900 text-sm mt-1 leading-tight">{termo.nombre}</h2>
+            <h2 className="font-bold text-teal-900 text-sm mt-1 leading-tight">{termo.nombre}</h2>
             {termo.numero && <p className="text-xs text-gray-500">N° {termo.numero}</p>}
           </div>
 
@@ -118,11 +118,11 @@ export default function Sidebar({
               <div key={y} className="mb-1">
                 <button
                   onClick={() => toggleYear(y)}
-                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-blue-50 transition-colors text-sm font-semibold text-blue-900"
+                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-teal-50 transition-colors text-sm font-semibold text-teal-900"
                 >
                   <span>{y}</span>
                   <svg
-                    className={`w-3.5 h-3.5 text-blue-400 transition-transform ${expandedYears.has(y) ? 'rotate-90' : ''}`}
+                    className={`w-3.5 h-3.5 text-teal-400 transition-transform ${expandedYears.has(y) ? 'rotate-90' : ''}`}
                     fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -144,9 +144,9 @@ export default function Sidebar({
                           className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors ${
                             active
                               ? isAmbiental
-                                ? 'bg-blue-700 text-white font-semibold'
-                                : 'bg-teal-700 text-white font-semibold'
-                              : 'hover:bg-blue-50 text-gray-700'
+                                ? 'bg-teal-700 text-white font-semibold'
+                                : 'bg-orange-500 text-white font-semibold'
+                              : 'hover:bg-teal-50 text-gray-700'
                           }`}
                         >
                           <span className="flex-1 text-left">{mesNombre}</span>
@@ -154,7 +154,7 @@ export default function Sidebar({
                             <span className={`w-2 h-2 rounded-full shrink-0 ${active ? 'bg-white/70' : 'bg-green-500'}`} title="Con datos" />
                           )}
                           {current && !active && (
-                            <span className="text-xs text-blue-400 shrink-0">•</span>
+                            <span className="text-xs text-teal-400 shrink-0">•</span>
                           )}
                         </button>
                       );

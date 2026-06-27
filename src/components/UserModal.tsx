@@ -68,7 +68,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
-          <h2 className="font-bold text-blue-900 text-base">
+          <h2 className="font-bold text-teal-900 text-base">
             {initial ? 'Editar usuario' : 'Nuevo usuario'}
           </h2>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
@@ -82,7 +82,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
               <input
                 value={nombre}
                 onChange={e => setNombre(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                 placeholder="Ej: Juan Pérez"
               />
             </div>
@@ -91,7 +91,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
               <input
                 value={usuario}
                 onChange={e => setUsuario(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                 placeholder="Ej: jperez"
               />
             </div>
@@ -102,7 +102,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
             <input
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="••••••••"
             />
           </div>
@@ -209,7 +209,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2 shrink-0">
           <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
-          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold transition-colors">Guardar</button>
+          <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold transition-colors">Guardar</button>
         </div>
       </div>
     </div>

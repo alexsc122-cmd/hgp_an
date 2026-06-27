@@ -17,10 +17,10 @@ export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
   };
 
   return (
-    <div className="bg-white border border-blue-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-3">
+    <div className="bg-white border border-teal-100 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="font-bold text-blue-900 text-base leading-tight">{termo.nombre}</h3>
+          <h3 className="font-bold text-teal-900 text-base leading-tight">{termo.nombre}</h3>
           {termo.numero && (
             <p className="text-xs text-gray-500 mt-0.5">N° {termo.numero}</p>
           )}
@@ -28,8 +28,8 @@ export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
         <span
           className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
             isAmbiental
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-teal-100 text-teal-800'
+              ? 'bg-teal-100 text-teal-800'
+              : 'bg-orange-100 text-orange-700'
           }`}
         >
           {isAmbiental ? 'Ambiente' : 'Refrigeración'}
@@ -51,8 +51,8 @@ export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
           onClick={() => onView(termo)}
           className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-colors ${
             isAmbiental
-              ? 'bg-blue-700 hover:bg-blue-800 text-white'
-              : 'bg-teal-700 hover:bg-teal-800 text-white'
+              ? 'bg-teal-700 hover:bg-teal-800 text-white'
+              : 'bg-orange-500 hover:bg-orange-600 text-white'
           }`}
         >
           Ver registros →
