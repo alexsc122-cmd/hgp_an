@@ -5,9 +5,10 @@ interface Props {
   onView: (t: Termohigrometro) => void;
   onEdit?: (t: Termohigrometro) => void;
   onDelete?: (id: string) => void;
+  todayAlert?: { manana: boolean; tarde: boolean; locked: boolean };
 }
 
-export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
+export default function TermoCard({ termo, onView, onEdit, onDelete, todayAlert }: Props) {
   const isAmbiental = termo.tipo === 'ambiental';
 
   const handleDelete = () => {
@@ -45,6 +46,22 @@ export default function TermoCard({ termo, onView, onEdit, onDelete }: Props) {
           {termo.ubicacion}
         </p>
       )}
+
+      {(() => {
+        const alertMsg = todayAlert && !todayAlert.locked
+          ? (!todayAlert.manana && !todayAlert.tarde ? 'Sin registro hoy'
+            : !todayAlert.manana ? 'Falta registro mañana'
+            : !todayAlert.tarde ? 'Falta registro tarde'
+            : null)
+          : null;
+        return alertMsg ? (
+          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs font-semibold text-amber-700">
+            <span className="text-base leading-none">⚠️</span>
+            <span>{alertMsg}</span>
+            <span className="ml-auto text-amber-500 font-normal">Hoy</span>
+          </div>
+        ) : null;
+      })()}
 
       <div className="flex items-center gap-2 mt-1">
         <button

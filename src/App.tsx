@@ -190,6 +190,44 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
   const isAdmin = currentUser.rol === 'admin';
+  const [sortBy, setSortBy] = useState<'nombre' | 'ubicacion' | 'tipo'>('nombre');
+  const [todayStatus, setTodayStatus] = useState<Record<string, { manana: boolean; tarde: boolean; locked: boolean }>>({});
+
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const today = now.getDate();
+
+    Promise.all(
+      termos.map(async t => {
+        try {
+          const [registro, locked] = await Promise.all([
+            fsLoadRegistro(t.id, year, month),
+            fsLoadLockedDays(t.id, year, month),
+          ]);
+          const isLocked = locked.has(today);
+          let manana = false;
+          let tarde = false;
+          if (registro) {
+            const entry = (registro as { entries: Array<{ dia: number; tempManana: string; tempTarde: string }> })
+              .entries?.find((e: { dia: number }) => e.dia === today);
+            if (entry) {
+              manana = !!entry.tempManana?.trim();
+              tarde = !!entry.tempTarde?.trim();
+            }
+          }
+          return { id: t.id, manana, tarde, locked: isLocked };
+        } catch {
+          return { id: t.id, manana: false, tarde: false, locked: false };
+        }
+      })
+    ).then(results => {
+      const map: Record<string, { manana: boolean; tarde: boolean; locked: boolean }> = {};
+      results.forEach(r => { map[r.id] = { manana: r.manana, tarde: r.tarde, locked: r.locked }; });
+      setTodayStatus(map);
+    });
+  }, [termos]);
 
   useEffect(() => {
     fsLoadUsuarios().then(setUsuarios).catch(() => {
@@ -310,24 +348,57 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                 </button>
               )}
             </div>
-            {termos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4 text-3xl">🌡️</div>
-                <h2 className="text-lg font-bold text-teal-900 mb-1">No hay equipos registrados</h2>
-                <p className="text-sm text-gray-500 mb-6 max-w-xs">Agrega tu primer termohigrómetro para comenzar.</p>
-                {isAdmin && (
-                  <button onClick={onAdd} className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shadow">
-                    Agregar primer equipo
+            {termos.length > 0 && (
+              <div className="flex gap-2 mb-4 flex-wrap items-center">
+                <span className="text-sm text-gray-500">Ordenar por:</span>
+                {(['nombre', 'ubicacion', 'tipo'] as const).map(opt => (
+                  <button
+                    key={opt}
+                    onClick={() => setSortBy(opt)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                      sortBy === opt
+                        ? 'bg-teal-700 text-white'
+                        : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {opt === 'nombre' ? 'Nombre' : opt === 'ubicacion' ? 'Ubicación' : 'Tipo'}
                   </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {termos.map(t => (
-                  <TermoCard key={t.id} termo={t} onView={onView} onEdit={isAdmin ? onEdit : undefined} onDelete={isAdmin ? onDelete : undefined} />
                 ))}
               </div>
             )}
+            {(() => {
+              const sortedTermos = [...termos].sort((a, b) => {
+                if (sortBy === 'nombre') return a.nombre.localeCompare(b.nombre);
+                if (sortBy === 'ubicacion') return (a.ubicacion || '').localeCompare(b.ubicacion || '');
+                if (sortBy === 'tipo') return a.tipo.localeCompare(b.tipo);
+                return 0;
+              });
+              return termos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mb-4 text-3xl">🌡️</div>
+                  <h2 className="text-lg font-bold text-teal-900 mb-1">No hay equipos registrados</h2>
+                  <p className="text-sm text-gray-500 mb-6 max-w-xs">Agrega tu primer termohigrómetro para comenzar.</p>
+                  {isAdmin && (
+                    <button onClick={onAdd} className="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors shadow">
+                      Agregar primer equipo
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sortedTermos.map(t => (
+                    <TermoCard
+                      key={t.id}
+                      termo={t}
+                      onView={onView}
+                      onEdit={isAdmin ? onEdit : undefined}
+                      onDelete={isAdmin ? onDelete : undefined}
+                      todayAlert={todayStatus[t.id]}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </>
         )}
 
