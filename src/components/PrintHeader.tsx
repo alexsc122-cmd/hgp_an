@@ -36,7 +36,7 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
         </div>
         {/* QR Code */}
         <div style={{ flexShrink: 0, textAlign: 'center', marginLeft: '14px' }}>
-          <QRCodeSVG value={verifyUrl} size={72} level="M" />
+          <QRCodeSVG value={verifyUrl} size={100} level="M" />
           <div style={{ fontSize: '7px', color: '#6b7280', marginTop: '2px' }}>Verificar autenticidad</div>
         </div>
       </div>
