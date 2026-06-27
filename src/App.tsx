@@ -16,6 +16,7 @@ import {
   fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion,
   fsAuthCreateUser, fsAuthLogout, fsSendPasswordReset,
   fsGetUsuarioByLogin,
+  fsLoadConfig, fsSaveConfig, AppConfig,
 } from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -38,6 +39,65 @@ function useDebounce<T>(value: T, delay: number): T {
     return () => clearTimeout(t);
   }, [value, delay]);
   return debounced;
+}
+
+// ─── Configuración Tab ───────────────────────────────────────────────────────
+
+function ConfigTab({ config, onSave }: { config: AppConfig; onSave: (c: AppConfig) => void }) {
+  const [form, setForm] = useState<AppConfig>(config);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const field = (label: string, key: keyof AppConfig, placeholder: string) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">{label}</label>
+      <input
+        className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+        placeholder={placeholder}
+        value={form[key]}
+        onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+      />
+    </div>
+  );
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fsSaveConfig(form);
+      onSave(form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch { alert('Error al guardar configuración.'); }
+    setSaving(false);
+  };
+
+  return (
+    <>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-teal-900">Configuración</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Valores por defecto para el encabezado de todos los registros</p>
+      </div>
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {field('Institución', 'institucion', 'Ej. Clínica Renal El Puyo')}
+          {field('Estrategia / Programa / Proyecto', 'estrategia', 'Ej. Control Farmacéutico')}
+          {field('Establecimiento', 'establecimiento', 'Ej. VIVENS')}
+          {field('Dirección', 'direccion', 'Ej. Av. Principal, El Puyo')}
+        </div>
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold px-6 py-2 rounded-lg text-sm transition-colors"
+          >
+            {saving ? 'Guardando...' : 'Guardar configuración'}
+          </button>
+          {saved && <span className="text-teal-600 text-sm font-medium">✓ Guardado</span>}
+        </div>
+        <p className="text-xs text-gray-400">Estos valores se pre-llenan automáticamente en todos los formularios de registro.</p>
+      </div>
+    </>
+  );
 }
 
 // ─── Ubicaciones Tab ──────────────────────────────────────────────────────────
@@ -114,6 +174,8 @@ function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
 interface DashboardProps {
   termos: Termohigrometro[];
   ubicaciones: string[];
+  config: AppConfig;
+  onConfigSave: (c: AppConfig) => void;
   currentUser: Usuario;
   onView: (t: Termohigrometro) => void;
   onAdd: () => void;
@@ -122,8 +184,8 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
-  const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios' | 'ubicaciones'>('equipos');
+function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
+  const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios' | 'ubicaciones' | 'configuracion'>('equipos');
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
@@ -207,7 +269,7 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
       {/* Tabs — always visible, Usuarios only for admin */}
       <div className="bg-white border-b border-gray-200 px-6">
           <div className="flex gap-1 max-w-6xl mx-auto">
-            {(['equipos', 'reportes', ...(isAdmin ? ['usuarios', 'ubicaciones'] : [])] as const).map(t => (
+            {(['equipos', 'reportes', ...(isAdmin ? ['usuarios', 'ubicaciones', 'configuracion'] : [])] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t as typeof tab)}
@@ -215,7 +277,7 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
                   tab === t ? 'border-teal-600 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : t === 'usuarios' ? '👥 Usuarios' : '📍 Ubicaciones'}
+                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : t === 'usuarios' ? '👥 Usuarios' : t === 'ubicaciones' ? '📍 Ubicaciones' : '⚙️ Configuración'}
               </button>
             ))}
           </div>
@@ -321,6 +383,10 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
         {tab === 'ubicaciones' && isAdmin && (
           <UbicacionesTab ubicaciones={ubicaciones} />
         )}
+
+        {tab === 'configuracion' && isAdmin && (
+          <ConfigTab config={config} onSave={onConfigSave} />
+        )}
       </main>
 
       {userModalOpen && (
@@ -335,10 +401,11 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
 interface RegistroScreenProps {
   termo: Termohigrometro;
   currentUser: Usuario;
+  config: AppConfig;
   onBack: () => void;
 }
 
-function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
+function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenProps) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonthNum = now.getMonth() + 1;
@@ -351,9 +418,11 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
 
   const isAmbiental = termo.tipo === 'ambiental';
 
+  const defaultHeader = { institucion: config.institucion, estrategia: config.estrategia, establecimiento: config.establecimiento, direccion: config.direccion, noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') };
+
   // ─── Anexo 10 state ───
   const [anexo10, setAnexo10] = useState<Anexo10Data>({
-    header: { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') },
+    header: defaultHeader,
     footer: { revisadoPor: currentUser.nombre, cargo: '', fecha: '' },
     entries: emptyEntries10(currentYear, currentMonthNum),
   });
@@ -362,7 +431,7 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
 
   // ─── Anexo 11 state ───
   const [anexo11, setAnexo11] = useState<Anexo11Data>({
-    header: { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: termo.numero, anio: String(currentYear), mes: String(currentMonthNum).padStart(2, '0') },
+    header: defaultHeader,
     footer: { revisadoPor: currentUser.nombre, cargo: '', fecha: '' },
     entries: emptyEntries11(currentYear, currentMonthNum),
   });
@@ -739,6 +808,8 @@ export default function App() {
     return unsub;
   }, []);
 
+  const [appConfig, setAppConfig] = useState<AppConfig>({ institucion: '', estrategia: '', establecimiento: '', direccion: '' });
+
   // Load data only after Firebase Auth is ready and user is logged in
   useEffect(() => {
     if (!authReady || !currentUser) return;
@@ -746,6 +817,7 @@ export default function App() {
       alert('Error al cargar equipos. Verifica tu conexión.');
     });
     fsLoadUbicaciones().then(setUbicaciones).catch(() => {});
+    fsLoadConfig().then(setAppConfig).catch(() => {});
   }, [authReady, currentUser?.id]);
 
   // Visible termos: admin sees all, operador sees only assigned ones
@@ -809,6 +881,7 @@ export default function App() {
       <RegistroScreen
         termo={selectedTermo}
         currentUser={currentUser}
+        config={appConfig}
         onBack={() => setSelectedTermo(null)}
       />
     );
@@ -819,6 +892,8 @@ export default function App() {
       <Dashboard
         termos={visibleTermos}
         ubicaciones={ubicaciones}
+        config={appConfig}
+        onConfigSave={setAppConfig}
         currentUser={currentUser}
         onView={setSelectedTermo}
         onAdd={() => { setEditTarget(null); setModalOpen(true); }}

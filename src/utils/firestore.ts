@@ -66,6 +66,27 @@ export async function fsAuthDeleteUser(email: string, password: string): Promise
 
 // ─── Usuarios ─────────────────────────────────────────────────────────────────
 
+// ─── Configuración global ─────────────────────────────────────────────────────
+
+export interface AppConfig {
+  institucion: string;
+  estrategia: string;
+  establecimiento: string;
+  direccion: string;
+}
+
+export async function fsLoadConfig(): Promise<AppConfig> {
+  const snap = await getDoc(doc(db, 'config', 'header'));
+  if (!snap.exists()) return { institucion: '', estrategia: '', establecimiento: '', direccion: '' };
+  return snap.data() as AppConfig;
+}
+
+export async function fsSaveConfig(cfg: AppConfig): Promise<void> {
+  await setDoc(doc(db, 'config', 'header'), cfg);
+}
+
+// ─── Usuarios ─────────────────────────────────────────────────────────────────
+
 export async function fsLoadUsuarios(): Promise<Usuario[]> {
   const snap = await getDocs(collection(db, 'usuarios'));
   return snap.docs.map(d => d.data() as Usuario);
