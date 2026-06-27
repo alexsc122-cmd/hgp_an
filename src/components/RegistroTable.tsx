@@ -40,23 +40,23 @@ function FooterFields({ footer, onFooterChange }: {
         ))}
       </div>
 
-      {/* Print: professional signature block */}
-      <div className="footer-print hidden" style={{ marginTop: '16px', borderTop: '1px solid #99f6e4', paddingTop: '10px', gap: '0', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div style={{ textAlign: 'center', minWidth: '200px' }}>
-          <div style={{ borderTop: '1px solid #374151', marginBottom: '4px', marginTop: '32px', width: '180px', margin: '32px auto 4px' }} />
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#134e4a' }}>{footer.revisadoPor || '________________________________'}</div>
-          <div style={{ fontSize: '8px', color: '#0f766e' }}>{footer.cargo || 'Cargo'}</div>
-          <div style={{ fontSize: '7px', color: '#6b7280', marginTop: '1px' }}>Revisado y aprobado por</div>
+      {/* Print: professional signature block — kept compact to stay on page 1 */}
+      <div className="footer-print hidden" style={{ marginTop: '8px', borderTop: '2px solid #0f766e', paddingTop: '6px', gap: '0', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ textAlign: 'center', minWidth: '180px' }}>
+          <div style={{ borderTop: '1px solid #374151', width: '160px', margin: '18px auto 3px' }} />
+          <div style={{ fontSize: '8px', fontWeight: 700, color: '#134e4a' }}>{footer.revisadoPor || '________________________________'}</div>
+          <div style={{ fontSize: '7px', color: '#0f766e' }}>{footer.cargo || 'Cargo'}</div>
+          <div style={{ fontSize: '6.5px', color: '#6b7280', marginTop: '1px' }}>Revisado y aprobado por</div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: '8px', color: '#6b7280', flex: 1, paddingBottom: '4px' }}>
-          <div style={{ fontWeight: 600, color: '#0f766e', fontSize: '9px' }}>VIVENS — Clínica Renal El Puyo</div>
+        <div style={{ textAlign: 'center', fontSize: '7px', color: '#6b7280', flex: 1, paddingBottom: '2px' }}>
+          <div style={{ fontWeight: 700, color: '#0f766e', fontSize: '8px' }}>VIVENS — Clínica Renal El Puyo</div>
           <div>Control de Temperatura y Humedad</div>
-          <div style={{ marginTop: '2px', fontSize: '7px' }}>Documento generado digitalmente</div>
+          <div style={{ marginTop: '1px', fontSize: '6.5px' }}>Documento generado digitalmente · Desarrollado por Alex Naranjo</div>
         </div>
-        <div style={{ textAlign: 'center', minWidth: '160px' }}>
-          <div style={{ borderTop: '1px solid #374151', marginBottom: '4px', marginTop: '32px', width: '140px', margin: '32px auto 4px' }} />
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#134e4a' }}>{fechaDisplay || '________________'}</div>
-          <div style={{ fontSize: '7px', color: '#6b7280', marginTop: '1px' }}>Fecha de revisión</div>
+        <div style={{ textAlign: 'center', minWidth: '140px' }}>
+          <div style={{ borderTop: '1px solid #374151', width: '120px', margin: '18px auto 3px' }} />
+          <div style={{ fontSize: '8px', fontWeight: 700, color: '#134e4a' }}>{fechaDisplay || '________________'}</div>
+          <div style={{ fontSize: '6.5px', color: '#6b7280', marginTop: '1px' }}>Fecha de revisión</div>
         </div>
       </div>
     </>
