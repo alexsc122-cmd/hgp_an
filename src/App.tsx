@@ -693,12 +693,14 @@ export default function App() {
   const [termos, setTermos] = useState<Termohigrometro[]>([]);
   const [ubicaciones, setUbicaciones] = useState<string[]>([]);
 
+  // Load data only when user is logged in
   useEffect(() => {
+    if (!currentUser) return;
     fsLoadTermos().then(setTermos).catch(() => {
       alert('Error al cargar equipos. Verifica tu conexión.');
     });
     fsLoadUbicaciones().then(setUbicaciones).catch(() => {});
-  }, []);
+  }, [currentUser?.id]);
 
   // Visible termos: admin sees all, operador sees only assigned ones
   const visibleTermos = currentUser
