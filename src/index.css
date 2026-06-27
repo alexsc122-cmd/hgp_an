@@ -31,9 +31,37 @@
   .mobile-cards { display: none !important; }
   .desktop-table { display: block !important; }
 
-  /* Table print styles — compact to fit A4 portrait */
-  table { width: 100% !important; font-size: 7px !important; border-collapse: collapse !important; }
-  th, td { padding: 2px 3px !important; line-height: 1.2 !important; }
+  /* Table print styles — compact numeric columns, not full width */
+  .desktop-table table {
+    width: auto !important;
+    min-width: unset !important;
+    font-size: 8px !important;
+    border-collapse: collapse !important;
+  }
+  .desktop-table th,
+  .desktop-table td {
+    padding: 2px 4px !important;
+    line-height: 1.3 !important;
+    white-space: nowrap;
+  }
+  /* Narrow numeric columns (Temp/Hum values) */
+  .desktop-table td:nth-child(2),
+  .desktop-table td:nth-child(3),
+  .desktop-table td:nth-child(4),
+  .desktop-table td:nth-child(5),
+  .desktop-table td:nth-child(6),
+  .desktop-table td:nth-child(7) {
+    width: 36px !important;
+    text-align: center;
+  }
+  /* DÍA column */
+  .desktop-table td:nth-child(1),
+  .desktop-table th:nth-child(1) {
+    width: 20px !important;
+    text-align: center;
+  }
+  /* Header info table - full width */
+  .print-only table { width: 100% !important; font-size: 9px !important; }
 
   /* Signature footer print */
   .footer-screen { display: none !important; }

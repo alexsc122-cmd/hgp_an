@@ -28,11 +28,11 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
         </div>
         {/* Title block */}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '8px', color: '#0f766e', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '9px', color: '#0f766e', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             Clínica Renal El Puyo — VIVENS
           </div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#134e4a', marginTop: '1px', lineHeight: 1.2 }}>{title}</div>
-          <div style={{ fontSize: '8px', color: '#0f766e', marginTop: '1px' }}>{subtitle}</div>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#134e4a', marginTop: '2px', lineHeight: 1.2 }}>{title}</div>
+          <div style={{ fontSize: '9px', color: '#0f766e', marginTop: '2px' }}>{subtitle}</div>
         </div>
         {/* QR Code — smaller */}
         <div style={{ flexShrink: 0, textAlign: 'center', marginLeft: '12px' }}>
@@ -42,7 +42,7 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
       </div>
 
       {/* Info grid — single row, all 6 fields */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '7.5px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
         <tbody>
           <tr>
             {[
@@ -54,9 +54,9 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
               ['AÑO', header.anio, '5%'],
               ['MES', mesNombre, '6%'],
             ].map(([label, value, width]) => (
-              <td key={label} style={{ border: '1px solid #99f6e4', padding: '3px 5px', verticalAlign: 'top', width }}>
-                <div style={{ fontSize: '6px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
-                <div style={{ fontSize: '7.5px', color: '#134e4a', marginTop: '1px', fontWeight: 600 }}>{value || '—'}</div>
+              <td key={label} style={{ border: '1px solid #99f6e4', padding: '4px 6px', verticalAlign: 'top', width }}>
+                <div style={{ fontSize: '7px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                <div style={{ fontSize: '10px', color: '#134e4a', marginTop: '2px', fontWeight: 700 }}>{value || '—'}</div>
               </td>
             ))}
           </tr>
