@@ -40,23 +40,47 @@ function FooterFields({ footer, onFooterChange }: {
         ))}
       </div>
 
-      {/* Print: professional signature block — kept compact to stay on page 1 */}
-      <div className="footer-print hidden" style={{ marginTop: '8px', borderTop: '2px solid #0f766e', paddingTop: '6px', gap: '0', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div style={{ textAlign: 'center', minWidth: '180px' }}>
-          <div style={{ borderTop: '1px solid #374151', width: '160px', margin: '18px auto 3px' }} />
-          <div style={{ fontSize: '8px', fontWeight: 700, color: '#134e4a' }}>{footer.revisadoPor || '________________________________'}</div>
-          <div style={{ fontSize: '7px', color: '#0f766e' }}>{footer.cargo || 'Cargo'}</div>
-          <div style={{ fontSize: '6.5px', color: '#6b7280', marginTop: '1px' }}>Revisado y aprobado por</div>
+      {/* Print: professional signature block */}
+      <div className="footer-print hidden" style={{
+        marginTop: '12px',
+        borderTop: '2px solid #0f766e',
+        paddingTop: '10px',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        gap: '0',
+      }}>
+        {/* Left: Responsable */}
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ height: '32px' }} />{/* space for physical signature */}
+          <div style={{ borderTop: '1px solid #134e4a', width: '75%', margin: '0 auto 4px' }} />
+          <div style={{ fontSize: '8px', fontWeight: 700, color: '#134e4a' }}>{footer.revisadoPor || '________________________'}</div>
+          {footer.cargo && <div style={{ fontSize: '7px', color: '#0f766e', marginTop: '1px' }}>{footer.cargo}</div>}
+          <div style={{ fontSize: '6.5px', color: '#9ca3af', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Revisado y aprobado por</div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: '7px', color: '#6b7280', flex: 1, paddingBottom: '2px' }}>
-          <div style={{ fontWeight: 700, color: '#0f766e', fontSize: '8px' }}>VIVENS — Clínica Renal El Puyo</div>
-          <div>Control de Temperatura y Humedad</div>
-          <div style={{ marginTop: '1px', fontSize: '6.5px' }}>Documento generado digitalmente · Desarrollado por Alex Naranjo</div>
+
+        {/* Center: Institution */}
+        <div style={{ textAlign: 'center', flex: 1, paddingBottom: '4px' }}>
+          <div style={{
+            display: 'inline-block',
+            background: '#f0fdf4',
+            border: '1px solid #99f6e4',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            marginBottom: '4px',
+          }}>
+            <div style={{ fontSize: '8px', fontWeight: 800, color: '#0f766e' }}>VIVENS</div>
+            <div style={{ fontSize: '6.5px', color: '#134e4a' }}>Clínica Renal El Puyo</div>
+          </div>
+          <div style={{ fontSize: '6.5px', color: '#9ca3af' }}>Control de Temperatura y Humedad</div>
+          <div style={{ fontSize: '6px', color: '#d1d5db', marginTop: '1px' }}>Desarrollado por Alex Naranjo</div>
         </div>
-        <div style={{ textAlign: 'center', minWidth: '140px' }}>
-          <div style={{ borderTop: '1px solid #374151', width: '120px', margin: '18px auto 3px' }} />
-          <div style={{ fontSize: '8px', fontWeight: 700, color: '#134e4a' }}>{fechaDisplay || '________________'}</div>
-          <div style={{ fontSize: '6.5px', color: '#6b7280', marginTop: '1px' }}>Fecha de revisión</div>
+
+        {/* Right: Date */}
+        <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ height: '32px' }} />{/* space for physical date/stamp */}
+          <div style={{ borderTop: '1px solid #134e4a', width: '75%', margin: '0 auto 4px' }} />
+          <div style={{ fontSize: '8px', fontWeight: 700, color: '#134e4a' }}>{fechaDisplay || '________________________'}</div>
+          <div style={{ fontSize: '6.5px', color: '#9ca3af', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Fecha de revisión</div>
         </div>
       </div>
     </>
