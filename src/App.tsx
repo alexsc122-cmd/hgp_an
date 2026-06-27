@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase';
 import { useReactToPrint } from 'react-to-print';
 import { Termohigrometro, Anexo10Data, Anexo11Data, MESES, Usuario } from './types';
 import {
@@ -712,9 +714,7 @@ export default function App() {
 
   // Wait for Firebase Auth to initialize, then restore session
   useEffect(() => {
-    const { auth } = require('./firebase');
-    const { onAuthStateChanged } = require('firebase/auth');
-    const unsub = onAuthStateChanged(auth, (firebaseUser: import('firebase/auth').User | null) => {
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const saved = getSession();
         if (saved) {
@@ -726,7 +726,7 @@ export default function App() {
             ? email.replace('@vivens.local', '')
             : email.split('@')[0];
           fsGetUsuarioByLogin(usuario)
-            .then((found: import('./types').Usuario | null) => {
+            .then((found) => {
               if (found) { setSession(found); setCurrentUser(found); }
             })
             .finally(() => setAuthReady(true));
