@@ -2,8 +2,57 @@ import {
   doc, getDoc, setDoc, deleteDoc,
   collection, getDocs, query, where,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  deleteUser,
+  signOut,
+  fetchSignInMethodsForEmail,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from 'firebase/auth';
+import { db, auth } from '../firebase';
 import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data } from '../types';
+
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
+
+function toAuthEmail(usuario: string): string {
+  return `${usuario.trim().toLowerCase()}@vivens.local`;
+}
+
+export async function fsAuthLogin(usuario: string, password: string): Promise<void> {
+  await signInWithEmailAndPassword(auth, toAuthEmail(usuario), password);
+}
+
+export async function fsAuthLogout(): Promise<void> {
+  await signOut(auth);
+}
+
+export async function fsAuthCreateUser(usuario: string, password: string): Promise<void> {
+  const email = toAuthEmail(usuario);
+  const methods = await fetchSignInMethodsForEmail(auth, email);
+  if (methods.length === 0) {
+    await createUserWithEmailAndPassword(auth, email, password);
+  }
+}
+
+export async function fsAuthUpdatePassword(usuario: string, oldPassword: string, newPassword: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+  const credential = EmailAuthProvider.credential(toAuthEmail(usuario), oldPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
+}
+
+export async function fsAuthDeleteUser(usuario: string, password: string): Promise<void> {
+  try {
+    const cred = await signInWithEmailAndPassword(auth, toAuthEmail(usuario), password);
+    await deleteUser(cred.user);
+  } catch {
+    // Silently continue — Firestore data is removed regardless
+  }
+}
 
 // ─── Usuarios ─────────────────────────────────────────────────────────────────
 

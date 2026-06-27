@@ -12,6 +12,7 @@ import {
   fsLoadLockedDays, fsSaveLockedDays,
   fsGetMonthsWithData,
   fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion,
+  fsAuthCreateUser, fsAuthLogout,
 } from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -134,6 +135,8 @@ function Dashboard({ termos, ubicaciones, currentUser, onView, onAdd, onEdit, on
   const handleSaveUser = async (u: Usuario) => {
     try {
       await fsSaveUsuario(u);
+      // Register in Firebase Auth (only for new users or if not yet registered)
+      await fsAuthCreateUser(u.usuario, u.password);
       const updated = editUser ? usuarios.map(x => x.id === u.id ? u : x) : [...usuarios, u];
       setUsuarios(updated);
       setUserModalOpen(false);
@@ -709,7 +712,8 @@ export default function App() {
 
   const handleLogin = (user: Usuario) => setCurrentUser(user);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fsAuthLogout();
     setSession(null);
     setCurrentUser(null);
     setSelectedTermo(null);
