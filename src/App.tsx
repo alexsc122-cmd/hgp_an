@@ -191,6 +191,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const [editUser, setEditUser] = useState<Usuario | null>(null);
   const isAdmin = currentUser.rol === 'admin';
   const [sortBy, setSortBy] = useState<'nombre' | 'ubicacion' | 'tipo'>('nombre');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [todayStatus, setTodayStatus] = useState<Record<string, { manana: boolean; tarde: boolean; locked: boolean }>>({});
 
   useEffect(() => {
@@ -349,21 +350,46 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
               )}
             </div>
             {termos.length > 0 && (
-              <div className="flex gap-2 mb-4 flex-wrap items-center">
-                <span className="text-sm text-gray-500">Ordenar por:</span>
-                {(['nombre', 'ubicacion', 'tipo'] as const).map(opt => (
+              <div className="flex gap-2 mb-4 flex-wrap items-center justify-between">
+                <div className="flex gap-2 flex-wrap items-center">
+                  <span className="text-sm text-gray-500">Ordenar por:</span>
+                  {(['nombre', 'ubicacion', 'tipo'] as const).map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => setSortBy(opt)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                        sortBy === opt
+                          ? 'bg-teal-700 text-white'
+                          : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {opt === 'nombre' ? 'Nombre' : opt === 'ubicacion' ? 'Ubicación' : 'Tipo'}
+                    </button>
+                  ))}
+                </div>
+                {/* Vista grid / lista */}
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                   <button
-                    key={opt}
-                    onClick={() => setSortBy(opt)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                      sortBy === opt
-                        ? 'bg-teal-700 text-white'
-                        : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    onClick={() => setViewMode('grid')}
+                    title="Vista cuadrícula"
+                    className={`px-2.5 py-1.5 transition-colors ${viewMode === 'grid' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
                   >
-                    {opt === 'nombre' ? 'Nombre' : opt === 'ubicacion' ? 'Ubicación' : 'Tipo'}
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                      <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+                      <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+                    </svg>
                   </button>
-                ))}
+                  <button
+                    onClick={() => setViewMode('list')}
+                    title="Vista lista"
+                    className={`px-2.5 py-1.5 border-l border-gray-200 transition-colors ${viewMode === 'list' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                      <rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/>
+                      <rect x="1" y="11.5" width="14" height="2.5" rx="1"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             )}
             {(() => {
@@ -385,7 +411,10 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className={viewMode === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+                  : 'flex flex-col gap-2'
+                }>
                   {sortedTermos.map(t => (
                     <TermoCard
                       key={t.id}
@@ -394,6 +423,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                       onEdit={isAdmin ? onEdit : undefined}
                       onDelete={isAdmin ? onDelete : undefined}
                       todayAlert={todayStatus[t.id]}
+                      listMode={viewMode === 'list'}
                     />
                   ))}
                 </div>
