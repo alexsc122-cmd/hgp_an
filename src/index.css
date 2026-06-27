@@ -73,8 +73,17 @@
   .print-charts-row { display: flex !important; flex-direction: row !important; gap: 8px !important; margin-top: 8px !important; page-break-inside: avoid !important; }
   .print-charts-single { display: block !important; margin-top: 8px !important; page-break-inside: avoid !important; }
 
-  /* Keep signature on same page */
-  .footer-print { page-break-before: avoid !important; break-before: avoid !important; }
+  /* Push signature to bottom of page */
+  .print-container {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 277mm !important;
+  }
+  .footer-print {
+    margin-top: auto !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
   .print-container { page-break-inside: avoid !important; }
 
   /* Signature footer print */
