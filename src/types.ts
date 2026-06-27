@@ -75,4 +75,6 @@ export interface Termohigrometro {
   tipo: 'ambiental' | 'refrigeracion';
   ubicacion: string;
   creadoEn: string;
+  revisadoPor?: string;
+  cargo?: string;
 }

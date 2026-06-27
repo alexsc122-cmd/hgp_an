@@ -13,6 +13,8 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
   const [numero, setNumero] = useState('');
   const [tipo, setTipo] = useState<'ambiental' | 'refrigeracion'>('ambiental');
   const [ubicacion, setUbicacion] = useState('');
+  const [revisadoPor, setRevisadoPor] = useState('');
+  const [cargo, setCargo] = useState('');
 
   useEffect(() => {
     if (initial) {
@@ -20,11 +22,15 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
       setNumero(initial.numero);
       setTipo(initial.tipo);
       setUbicacion(initial.ubicacion);
+      setRevisadoPor(initial.revisadoPor ?? '');
+      setCargo(initial.cargo ?? '');
     } else {
       setNombre('');
       setNumero('');
       setTipo('ambiental');
       setUbicacion('');
+      setRevisadoPor('');
+      setCargo('');
     }
   }, [initial]);
 
@@ -38,20 +44,22 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
       tipo,
       ubicacion: ubicacion.trim(),
       creadoEn: initial?.creadoEn ?? new Date().toISOString(),
+      revisadoPor: revisadoPor.trim(),
+      cargo: cargo.trim(),
     };
     onSave(termo);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-teal-100 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-teal-100 flex items-center justify-between shrink-0">
           <h2 className="text-lg font-bold text-teal-900">
             {initial ? 'Editar equipo' : 'Agregar equipo'}
           </h2>
           <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Nombre del equipo *</label>
             <input
@@ -74,28 +82,14 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Tipo de registro</label>
             <label className="flex items-center gap-3 p-3 border border-teal-200 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
-              <input
-                type="radio"
-                name="tipo"
-                value="ambiental"
-                checked={tipo === 'ambiental'}
-                onChange={() => setTipo('ambiental')}
-                className="text-blue-600"
-              />
+              <input type="radio" name="tipo" value="ambiental" checked={tipo === 'ambiental'} onChange={() => setTipo('ambiental')} className="text-blue-600" />
               <div>
                 <div className="text-sm font-semibold text-teal-900">Temperatura Ambiente</div>
                 <div className="text-xs text-gray-500">Anexo 10 — Temperatura y Humedad Ambiental</div>
               </div>
             </label>
             <label className="flex items-center gap-3 p-3 border border-teal-200 rounded-lg cursor-pointer hover:bg-teal-50 transition-colors">
-              <input
-                type="radio"
-                name="tipo"
-                value="refrigeracion"
-                checked={tipo === 'refrigeracion'}
-                onChange={() => setTipo('refrigeracion')}
-                className="text-teal-600"
-              />
+              <input type="radio" name="tipo" value="refrigeracion" checked={tipo === 'refrigeracion'} onChange={() => setTipo('refrigeracion')} className="text-teal-600" />
               <div>
                 <div className="text-sm font-semibold text-teal-900">Temperatura de Refrigeración</div>
                 <div className="text-xs text-gray-500">Anexo 11 — Temperatura de Refrigeración</div>
@@ -122,18 +116,38 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
               </select>
             )}
           </div>
+
+          {/* Responsable de revisión */}
+          <div className="border-t border-teal-100 pt-4">
+            <p className="text-xs font-semibold text-teal-800 uppercase tracking-wide mb-3">Responsable del registro</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600">Revisado por</label>
+                <input
+                  className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  placeholder="Nombre completo del responsable"
+                  value={revisadoPor}
+                  onChange={e => setRevisadoPor(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600">Cargo</label>
+                <input
+                  className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  placeholder="Ej. Químico Farmacéutico, Regente"
+                  value={cargo}
+                  onChange={e => setCargo(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">Se pre-llena automáticamente en el pie de cada registro mensual.</p>
+          </div>
+
           <div className="flex gap-3 pt-2">
-            <button
-              type="submit"
-              className="flex-1 bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow"
-            >
+            <button type="submit" className="flex-1 bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow">
               Guardar
             </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 rounded-lg text-sm transition-colors"
-            >
+            <button type="button" onClick={onCancel} className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 rounded-lg text-sm transition-colors">
               Cancelar
             </button>
           </div>

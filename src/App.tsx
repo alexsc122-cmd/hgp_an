@@ -526,7 +526,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   // ─── Anexo 10 state ───
   const [anexo10, setAnexo10] = useState<Anexo10Data>({
     header: defaultHeader,
-    footer: { revisadoPor: currentUser.nombre, cargo: '', fecha: '' },
+    footer: { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' },
     entries: emptyEntries10(currentYear, currentMonthNum),
   });
   const [lockedDays10, setLockedDays10] = useState<Set<number>>(new Set());
@@ -535,7 +535,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   // ─── Anexo 11 state ───
   const [anexo11, setAnexo11] = useState<Anexo11Data>({
     header: defaultHeader,
-    footer: { revisadoPor: currentUser.nombre, cargo: '', fecha: '' },
+    footer: { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' },
     entries: emptyEntries11(currentYear, currentMonthNum),
   });
   const [lockedDays11, setLockedDays11] = useState<Set<number>>(new Set());
@@ -577,7 +577,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
-          const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
           setAnexo10({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays10(locked);
@@ -596,7 +596,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
-          const footer = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
           setAnexo11({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays11(locked);
@@ -693,7 +693,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
           const entries = clearUnlockedNombres(rawEntries, locked);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
-          const footer10 = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          const footer10 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer10.revisadoPor) footer10.revisadoPor = currentUser.nombre;
           setAnexo10({ ...(base ?? { header, footer: footer10 }), header, footer: footer10, entries });
           setLockedDays10(locked);
@@ -709,7 +709,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
           const entries = clearUnlockedNombres(rawEntries, locked);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
-          const footer11 = base?.footer ?? { revisadoPor: currentUser.nombre, cargo: '', fecha: '' };
+          const footer11 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer11.revisadoPor) footer11.revisadoPor = currentUser.nombre;
           setAnexo11({ ...(base ?? { header, footer: footer11 }), header, footer: footer11, entries });
           setLockedDays11(locked);
