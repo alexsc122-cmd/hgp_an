@@ -467,10 +467,11 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const entries = clearUnlockedNombres(rawEntries, locked);
           const savedHeader = base?.header;
           const header = {
-            institucion: savedHeader?.institucion || config.institucion,
-            estrategia: savedHeader?.estrategia || config.estrategia,
-            establecimiento: savedHeader?.establecimiento || config.establecimiento,
-            direccion: savedHeader?.direccion || config.direccion,
+            // Config fields always win — changing config updates all records
+            institucion: config.institucion || savedHeader?.institucion || '',
+            estrategia: config.estrategia || savedHeader?.estrategia || '',
+            establecimiento: config.establecimiento || savedHeader?.establecimiento || '',
+            direccion: config.direccion || savedHeader?.direccion || '',
             noEquipo: savedHeader?.noEquipo || termo.numero,
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
@@ -485,10 +486,11 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const entries = clearUnlockedNombres(rawEntries, locked);
           const savedHeader = base?.header;
           const header = {
-            institucion: savedHeader?.institucion || config.institucion,
-            estrategia: savedHeader?.estrategia || config.estrategia,
-            establecimiento: savedHeader?.establecimiento || config.establecimiento,
-            direccion: savedHeader?.direccion || config.direccion,
+            // Config fields always win — changing config updates all records
+            institucion: config.institucion || savedHeader?.institucion || '',
+            estrategia: config.estrategia || savedHeader?.estrategia || '',
+            establecimiento: config.establecimiento || savedHeader?.establecimiento || '',
+            direccion: config.direccion || savedHeader?.direccion || '',
             noEquipo: savedHeader?.noEquipo || termo.numero,
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
@@ -509,6 +511,20 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sync config fields into open headers whenever the admin changes config
+  useEffect(() => {
+    if (loading) return;
+    const configPatch = {
+      institucion: config.institucion,
+      estrategia: config.estrategia,
+      establecimiento: config.establecimiento,
+      direccion: config.direccion,
+    };
+    setAnexo10(prev => ({ ...prev, header: { ...prev.header, ...configPatch } }));
+    setAnexo11(prev => ({ ...prev, header: { ...prev.header, ...configPatch } }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.institucion, config.estrategia, config.establecimiento, config.direccion]);
 
   // Auto-save with debounce
   const debouncedAnexo10 = useDebounce(anexo10, 800);
