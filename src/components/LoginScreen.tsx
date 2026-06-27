@@ -136,7 +136,7 @@ export default function LoginScreen({ onLogin }: Props) {
           </button>
         </form>
       </div>
-      <p className="mt-6 text-teal-100 text-xs opacity-70">© Clínica Renal El Puyo – VIVENS · Desarrollado por Alex SC</p>
+      <p className="mt-6 text-teal-100 text-xs opacity-70">© Clínica Renal El Puyo – VIVENS · Desarrollado por Alex Naranjo</p>
     </div>
   );
 }
