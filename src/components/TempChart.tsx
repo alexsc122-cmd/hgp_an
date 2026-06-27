@@ -50,7 +50,7 @@ export function Anexo10Chart({ entries, year, month }: Anexo10ChartProps) {
   if (tempData.length === 0 && humData.length === 0) return null;
 
   return (
-    <div className="mt-6 space-y-6 no-print">
+    <div className="mt-6 space-y-6 print-charts">
       {tempData.length > 0 && (
         <div className="bg-white border border-blue-100 rounded-lg p-4 shadow-sm">
           <h3 className="text-sm font-bold text-blue-900 mb-3">
@@ -182,7 +182,7 @@ export function Anexo11Chart({ entries, year, month }: Anexo11ChartProps) {
   if (data.length === 0) return null;
 
   return (
-    <div className="mt-6 no-print">
+    <div className="mt-6 print-charts">
       <div className="bg-white border border-blue-100 rounded-lg p-4 shadow-sm">
         <h3 className="text-sm font-bold text-blue-900 mb-3">
           Curva de Temperatura — {mesNombre} {year}
