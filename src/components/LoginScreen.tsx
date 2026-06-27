@@ -34,24 +34,19 @@ export default function LoginScreen({ onLogin }: Props) {
         await fsAuthCreateUser('admin@vivens.local', 'admin123');
       }
 
-      // Find user in Firestore first to validate credentials
+      // Find user profile in Firestore by username
       const found = await fsGetUsuarioByLogin(usuario.trim());
       if (!found) {
         setError('Usuario o contraseña incorrectos.');
         setLoading(false);
         return;
       }
-      if (found.password !== password) {
-        setError('Usuario o contraseña incorrectos.');
-        setLoading(false);
-        return;
-      }
 
-      // Ensure Firebase Auth account exists (migration for existing users)
+      // Ensure Firebase Auth account exists (migration for users created before Firebase Auth)
       const authEmail = found.email?.trim() || `${found.usuario.toLowerCase()}@vivens.local`;
       await fsAuthCreateUser(authEmail, found.password);
 
-      // Sign in with Firebase Auth
+      // Firebase Auth validates the password (source of truth for authentication)
       await fsAuthLogin(usuario.trim(), password);
 
       setSession(found);
