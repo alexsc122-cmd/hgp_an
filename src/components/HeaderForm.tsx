@@ -7,20 +7,32 @@ interface Props {
   equipoLabel?: string;
   anexoTitle: string;
   anexoSubtitle: string;
+  lockedFields?: (keyof HeaderInfo)[];
 }
 
-export default function HeaderForm({ data, onChange, equipoLabel = 'No. Termohigrómetro', anexoTitle, anexoSubtitle }: Props) {
-  const field = (label: string, key: keyof HeaderInfo, extra?: React.InputHTMLAttributes<HTMLInputElement>) => (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">{label}</label>
-      <input
-        className="border border-teal-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-        value={data[key]}
-        onChange={e => onChange({ ...data, [key]: e.target.value })}
-        {...extra}
-      />
-    </div>
-  );
+export default function HeaderForm({ data, onChange, equipoLabel = 'No. Termohigrómetro', anexoTitle, anexoSubtitle, lockedFields = [] }: Props) {
+  const field = (label: string, key: keyof HeaderInfo, extra?: React.InputHTMLAttributes<HTMLInputElement>) => {
+    const isLocked = lockedFields.includes(key);
+    return (
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide flex items-center gap-1">
+          {label}
+          {isLocked && <span className="text-teal-500 text-xs normal-case font-normal">🔒</span>}
+        </label>
+        <input
+          className={`border rounded px-2 py-1 text-sm focus:outline-none ${
+            isLocked
+              ? 'border-teal-100 bg-teal-50 text-teal-800 cursor-default select-none'
+              : 'border-teal-200 focus:ring-2 focus:ring-teal-400'
+          }`}
+          value={data[key]}
+          onChange={e => !isLocked && onChange({ ...data, [key]: e.target.value })}
+          readOnly={isLocked}
+          {...extra}
+        />
+      </div>
+    );
+  };
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);

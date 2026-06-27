@@ -266,22 +266,24 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
         </div>
       </nav>
 
-      {/* Tabs — always visible, Usuarios only for admin */}
-      <div className="bg-white border-b border-gray-200 px-6">
-          <div className="flex gap-1 max-w-6xl mx-auto">
+      {/* Tabs — scrollable on mobile */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="overflow-x-auto scrollbar-none">
+          <div className="flex gap-1 max-w-6xl mx-auto px-2 min-w-max">
             {(['equipos', 'reportes', ...(isAdmin ? ['usuarios', 'ubicaciones', 'configuracion'] : [])] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t as typeof tab)}
-                className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                className={`px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
                   tab === t ? 'border-teal-600 text-teal-700' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : t === 'usuarios' ? '👥 Usuarios' : t === 'ubicaciones' ? '📍 Ubicaciones' : '⚙️ Configuración'}
+                {t === 'equipos' ? '🌡️ Equipos' : t === 'reportes' ? '📊 Reportes' : t === 'usuarios' ? '👥 Usuarios' : t === 'ubicaciones' ? '📍 Ubicaciones' : '⚙️ Config'}
               </button>
             ))}
           </div>
         </div>
+      </div>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* ─── Reportes tab ─── */}
@@ -741,6 +743,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     equipoLabel="No. Termohigrómetro"
                     anexoTitle="ANEXO 10 — REGISTRO DE TEMPERATURA Y HUMEDAD AMBIENTAL"
                     anexoSubtitle="Almacén / Bodega Farmacéutica"
+                    lockedFields={(['institucion','estrategia','establecimiento','direccion'] as const).filter(k => !!config[k])}
                   />
                   <Anexo10Table
                     entries={anexo10.entries}
@@ -766,6 +769,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     equipoLabel="No. Equipo de Refrigeración"
                     anexoTitle="ANEXO 11 — REGISTRO DE TEMPERATURA DE REFRIGERACIÓN"
                     anexoSubtitle="Almacén / Cadena de Frío Farmacéutica"
+                    lockedFields={(['institucion','estrategia','establecimiento','direccion'] as const).filter(k => !!config[k])}
                   />
                   <Anexo11Table
                     entries={anexo11.entries}
