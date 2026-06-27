@@ -8,6 +8,7 @@ import {
   deleteUser,
   signOut,
   updatePassword,
+  sendPasswordResetEmail,
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from 'firebase/auth';
@@ -16,39 +17,47 @@ import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data } from '../types';
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-function toAuthEmail(usuario: string): string {
+function toFallbackEmail(usuario: string): string {
   return `${usuario.trim().toLowerCase()}@vivens.local`;
 }
 
 export async function fsAuthLogin(usuario: string, password: string): Promise<void> {
-  await signInWithEmailAndPassword(auth, toAuthEmail(usuario), password);
+  // Look up real email from Firestore first
+  const found = await fsGetUsuarioByLogin(usuario);
+  const email = found?.email?.trim() || toFallbackEmail(usuario);
+  await signInWithEmailAndPassword(auth, email, password);
 }
 
 export async function fsAuthLogout(): Promise<void> {
   await signOut(auth);
 }
 
-export async function fsAuthCreateUser(usuario: string, password: string): Promise<void> {
+export async function fsAuthCreateUser(email: string, password: string): Promise<void> {
   try {
-    await createUserWithEmailAndPassword(auth, toAuthEmail(usuario), password);
+    await createUserWithEmailAndPassword(auth, email, password);
+    // Send password setup email so user can set their own password
+    await sendPasswordResetEmail(auth, email);
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
-    // User already exists in Firebase Auth — that's fine
     if (code !== 'auth/email-already-in-use') throw err;
   }
 }
 
-export async function fsAuthUpdatePassword(usuario: string, oldPassword: string, newPassword: string): Promise<void> {
+export async function fsSendPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+}
+
+export async function fsAuthUpdatePassword(email: string, oldPassword: string, newPassword: string): Promise<void> {
   const user = auth.currentUser;
   if (!user) return;
-  const credential = EmailAuthProvider.credential(toAuthEmail(usuario), oldPassword);
+  const credential = EmailAuthProvider.credential(email, oldPassword);
   await reauthenticateWithCredential(user, credential);
   await updatePassword(user, newPassword);
 }
 
-export async function fsAuthDeleteUser(usuario: string, password: string): Promise<void> {
+export async function fsAuthDeleteUser(email: string, password: string): Promise<void> {
   try {
-    const cred = await signInWithEmailAndPassword(auth, toAuthEmail(usuario), password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
     await deleteUser(cred.user);
   } catch {
     // Silently continue — Firestore data is removed regardless

@@ -26,11 +26,12 @@ export default function LoginScreen({ onLogin }: Props) {
       if (allUsers.length === 0) {
         const admin: Usuario = {
           id: '1', nombre: 'Administrador', usuario: 'admin',
-          password: 'admin123', rol: 'admin', termosAsignados: [],
+          email: 'admin@vivens.local', password: 'admin123',
+          rol: 'admin', termosAsignados: [],
           creadoEn: new Date().toISOString(),
         };
         await fsSaveUsuario(admin);
-        await fsAuthCreateUser('admin', 'admin123');
+        await fsAuthCreateUser('admin@vivens.local', 'admin123');
       }
 
       // Find user in Firestore first to validate credentials
@@ -47,7 +48,8 @@ export default function LoginScreen({ onLogin }: Props) {
       }
 
       // Ensure Firebase Auth account exists (migration for existing users)
-      await fsAuthCreateUser(found.usuario, found.password);
+      const authEmail = found.email?.trim() || `${found.usuario.toLowerCase()}@vivens.local`;
+      await fsAuthCreateUser(authEmail, found.password);
 
       // Sign in with Firebase Auth
       await fsAuthLogin(usuario.trim(), password);

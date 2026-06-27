@@ -8,9 +8,10 @@ export interface Usuario {
   id: string;
   nombre: string;
   usuario: string;   // login username
-  password: string;  // plain text (local-only app)
+  email: string;     // real email for Firebase Auth
+  password: string;
   rol: UserRole;
-  termosAsignados: string[];  // termo IDs (empty = all for admin)
+  termosAsignados: string[];
   creadoEn: string;
 }
 

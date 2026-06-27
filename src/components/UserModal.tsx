@@ -11,6 +11,7 @@ interface Props {
 export default function UserModal({ initial, termos, onSave, onCancel }: Props) {
   const [nombre, setNombre] = useState(initial?.nombre ?? '');
   const [usuario, setUsuario] = useState(initial?.usuario ?? '');
+  const [email, setEmail] = useState(initial?.email ?? '');
   const [password, setPassword] = useState(initial?.password ?? '');
   const [rol, setRol] = useState<UserRole>(initial?.rol ?? 'operador');
   const validIds = new Set(termos.map(t => t.id));
@@ -43,8 +44,12 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
   };
 
   const handleSave = () => {
-    if (!nombre.trim() || !usuario.trim() || !password.trim()) {
-      setError('Nombre, usuario y contraseña son obligatorios.');
+    if (!nombre.trim() || !usuario.trim() || !email.trim() || !password.trim()) {
+      setError('Nombre, usuario, correo y contraseña son obligatorios.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('El correo electrónico no es válido.');
       return;
     }
     if (rol === 'operador' && termosAsignados.length === 0) {
@@ -55,6 +60,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
       id: initial?.id ?? Date.now().toString(),
       nombre: nombre.trim(),
       usuario: usuario.trim(),
+      email: email.trim().toLowerCase(),
       password: password.trim(),
       rol,
       termosAsignados: rol === 'admin' ? [] : termosAsignados,
@@ -98,7 +104,21 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Contraseña</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Correo electrónico
+              <span className="ml-1 font-normal text-teal-600">— se enviará un link para establecer contraseña</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              placeholder="Ej: jperez@clinica.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Contraseña temporal</label>
             <input
               value={password}
               onChange={e => setPassword(e.target.value)}
