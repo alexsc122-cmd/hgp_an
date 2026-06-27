@@ -160,6 +160,16 @@ export async function fsDeleteUbicacion(nombre: string): Promise<void> {
   await deleteDoc(doc(db, 'ubicaciones', id));
 }
 
+// ─── Public verification helpers (Firestore rules must allow public read) ─────
+
+export const fsLoadRegistroPublic = fsLoadRegistro;
+
+export async function fsLoadTermoPublic(termoId: string): Promise<Termohigrometro | null> {
+  const snap = await getDoc(doc(db, 'termos', termoId));
+  if (!snap.exists()) return null;
+  return snap.data() as Termohigrometro;
+}
+
 // ─── Días bloqueados ──────────────────────────────────────────────────────────
 
 export async function fsLoadLockedDays(termoId: string, year: number, month: number): Promise<Set<number>> {

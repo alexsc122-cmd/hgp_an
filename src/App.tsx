@@ -27,6 +27,8 @@ import TermoModal from './components/TermoModal';
 import LoginScreen from './components/LoginScreen';
 import UserModal from './components/UserModal';
 import ReportesTab from './components/ReportesTab';
+import PrintHeader from './components/PrintHeader';
+import VerificationPage from './components/VerificationPage';
 
 function clearUnlockedNombres<T extends { dia: number; nombre: string }>(entries: T[], locked: Set<number>): T[] {
   return entries.map(e => locked.has(e.dia) ? e : { ...e, nombre: '' });
@@ -780,6 +782,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   const month11 = parseInt(anexo11.header.mes);
 
   const mesNombre = MESES[selectedMonth - 1];
+  const verifyUrl = `https://hgp-an.vercel.app/?verify=${termo.id}_${selectedYear}_${String(selectedMonth).padStart(2, '0')}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex flex-col">
@@ -853,7 +856,15 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
               </div>
 
               {isAmbiental ? (
-                <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
+                <div ref={printRef} className="bg-white rounded-xl shadow-md p-6 print-container">
+                  <PrintHeader
+                    title="ANEXO 10 — REGISTRO DE TEMPERATURA Y HUMEDAD AMBIENTAL"
+                    subtitle="Almacén / Bodega Farmacéutica"
+                    header={anexo10.header}
+                    verifyUrl={verifyUrl}
+                    diasConfirmados={lockedDays10.size}
+                    totalDias={anexo10.entries.length}
+                  />
                   <HeaderForm
                     data={anexo10.header}
                     onChange={handleHeader10Change}
@@ -879,7 +890,15 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                   />
                 </div>
               ) : (
-                <div ref={printRef} className="bg-white rounded-xl shadow-md p-6">
+                <div ref={printRef} className="bg-white rounded-xl shadow-md p-6 print-container">
+                  <PrintHeader
+                    title="ANEXO 11 — REGISTRO DE TEMPERATURA DE REFRIGERACIÓN"
+                    subtitle="Almacén / Cadena de Frío Farmacéutica"
+                    header={anexo11.header}
+                    verifyUrl={verifyUrl}
+                    diasConfirmados={lockedDays11.size}
+                    totalDias={anexo11.entries.length}
+                  />
                   <HeaderForm
                     data={anexo11.header}
                     onChange={handleHeader11Change}
@@ -1000,6 +1019,13 @@ export default function App() {
       alert('Error al eliminar equipo.');
     }
   };
+
+  // Check for public verification URL param
+  const urlParams = new URLSearchParams(window.location.search);
+  const verifyParam = urlParams.get('verify');
+  if (verifyParam) {
+    return <VerificationPage verifyParam={verifyParam} />;
+  }
 
   if (!authReady) {
     return (
