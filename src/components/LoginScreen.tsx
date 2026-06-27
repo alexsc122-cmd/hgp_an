@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Usuario } from '../types';
 import { setSession } from '../utils/storage';
-import { fsAuthLogin, fsAuthCreateUser, fsGetUsuarioByLogin, fsLoadUsuarios, fsSaveUsuario } from '../utils/firestore';
+import {
+  fsAuthLogin, fsAuthCreateUser,
+  fsGetUsuarioByLogin, fsLoadUsuarios, fsSaveUsuario,
+} from '../utils/firestore';
 
 interface Props {
   onLogin: (user: Usuario) => void;
@@ -18,7 +21,7 @@ export default function LoginScreen({ onLogin }: Props) {
     setError('');
     setLoading(true);
     try {
-      // Auto-create admin if no users exist
+      // Auto-create admin if no users exist in Firestore
       const allUsers = await fsLoadUsuarios();
       if (allUsers.length === 0) {
         const admin: Usuario = {
@@ -30,23 +33,30 @@ export default function LoginScreen({ onLogin }: Props) {
         await fsAuthCreateUser('admin', 'admin123');
       }
 
-      // Sign in with Firebase Auth
-      await fsAuthLogin(usuario.trim(), password);
-
-      // Load user profile from Firestore
+      // Find user in Firestore first to validate credentials
       const found = await fsGetUsuarioByLogin(usuario.trim());
       if (!found) {
-        setError('Usuario no encontrado en el sistema.');
+        setError('Usuario o contraseña incorrectos.');
         setLoading(false);
         return;
       }
+      if (found.password !== password) {
+        setError('Usuario o contraseña incorrectos.');
+        setLoading(false);
+        return;
+      }
+
+      // Ensure Firebase Auth account exists (migration for existing users)
+      await fsAuthCreateUser(found.usuario, found.password);
+
+      // Sign in with Firebase Auth
+      await fsAuthLogin(usuario.trim(), password);
+
       setSession(found);
       onLogin(found);
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? '';
-      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-        setError('Usuario o contraseña incorrectos.');
-      } else if (code === 'auth/too-many-requests') {
+      if (code === 'auth/too-many-requests') {
         setError('Demasiados intentos fallidos. Intenta más tarde.');
       } else {
         setError('Error de conexión. Verifica tu internet.');
