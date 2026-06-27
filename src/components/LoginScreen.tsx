@@ -134,12 +134,9 @@ export default function LoginScreen({ onLogin }: Props) {
           >
             {loading ? 'Verificando...' : 'Ingresar'}
           </button>
-          <p className="text-center text-xs text-gray-400">
-            Usuario por defecto: <span className="font-mono font-semibold">admin</span> / <span className="font-mono font-semibold">admin123</span>
-          </p>
         </form>
       </div>
-      <p className="mt-6 text-teal-100 text-xs opacity-70">© Clínica Renal El Puyo – VIVENS</p>
+      <p className="mt-6 text-teal-100 text-xs opacity-70">© Clínica Renal El Puyo – VIVENS · Desarrollado por Alex SC</p>
     </div>
   );
 }
