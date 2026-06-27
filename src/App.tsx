@@ -13,6 +13,7 @@ import {
   fsGetMonthsWithData,
   fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion,
   fsAuthCreateUser, fsAuthLogout, fsSendPasswordReset,
+  fsGetUsuarioByLogin,
 } from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -704,18 +705,48 @@ function RegistroScreen({ termo, currentUser, onBack }: RegistroScreenProps) {
 // ─── Root App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<Usuario | null>(() => getSession());
+  const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [termos, setTermos] = useState<Termohigrometro[]>([]);
   const [ubicaciones, setUbicaciones] = useState<string[]>([]);
 
-  // Load data only when user is logged in
+  // Wait for Firebase Auth to initialize, then restore session
   useEffect(() => {
-    if (!currentUser) return;
+    const { auth } = require('./firebase');
+    const { onAuthStateChanged } = require('firebase/auth');
+    const unsub = onAuthStateChanged(auth, (firebaseUser: import('firebase/auth').User | null) => {
+      if (firebaseUser) {
+        const saved = getSession();
+        if (saved) {
+          setCurrentUser(saved);
+          setAuthReady(true);
+        } else {
+          const email = firebaseUser.email ?? '';
+          const usuario = email.includes('@vivens.local')
+            ? email.replace('@vivens.local', '')
+            : email.split('@')[0];
+          fsGetUsuarioByLogin(usuario)
+            .then((found: import('./types').Usuario | null) => {
+              if (found) { setSession(found); setCurrentUser(found); }
+            })
+            .finally(() => setAuthReady(true));
+        }
+      } else {
+        setCurrentUser(null);
+        setAuthReady(true);
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Load data only after Firebase Auth is ready and user is logged in
+  useEffect(() => {
+    if (!authReady || !currentUser) return;
     fsLoadTermos().then(setTermos).catch(() => {
       alert('Error al cargar equipos. Verifica tu conexión.');
     });
     fsLoadUbicaciones().then(setUbicaciones).catch(() => {});
-  }, [currentUser?.id]);
+  }, [authReady, currentUser?.id]);
 
   // Visible termos: admin sees all, operador sees only assigned ones
   const visibleTermos = currentUser
@@ -757,6 +788,17 @@ export default function App() {
       alert('Error al eliminar equipo.');
     }
   };
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0f766e, #0d9488)' }}>
+        <div className="text-center text-white">
+          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm font-medium opacity-80">Iniciando sesión...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} />;
