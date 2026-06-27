@@ -6,14 +6,44 @@
   .print-only { display: none !important; }
 }
 @media print {
+  /* General */
+  body { background: white !important; margin: 0 !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Hide screen-only UI */
   .no-print { display: none !important; }
+
+  /* Show print-only elements */
   .print-only { display: block !important; }
+
+  /* Clean up the print container */
   .print-container {
     box-shadow: none !important;
     border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
-  body { background: white !important; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Hide the on-screen HeaderForm (PrintHeader replaces it) */
+  .screen-header { display: none !important; }
+
+  /* Hide mobile cards, always show desktop table */
+  .mobile-cards { display: none !important; }
+  .desktop-table { display: block !important; }
+
+  /* Table print styles */
+  table { width: 100% !important; font-size: 8px !important; }
+  th, td { padding: 3px 4px !important; }
+
+  /* Signature footer print */
+  .footer-screen { display: none !important; }
+  .footer-print { display: flex !important; }
+
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 10mm 8mm;
+  }
 }
 
 .scrollbar-none {

@@ -17,22 +17,49 @@ function FooterFields({ footer, onFooterChange }: {
   footer: { revisadoPor: string; cargo: string; fecha: string };
   onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
 }) {
+  const fechaDisplay = footer.fecha
+    ? new Date(footer.fecha + 'T12:00:00').toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '';
+
   return (
-    <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-      {(['revisadoPor', 'cargo', 'fecha'] as const).map(k => (
-        <div key={k} className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
-            {k === 'revisadoPor' ? 'Revisado por' : k === 'cargo' ? 'Cargo' : 'Fecha'}
-          </label>
-          <input
-            className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-            value={footer[k]}
-            onChange={e => onFooterChange({ ...footer, [k]: e.target.value })}
-            type={k === 'fecha' ? 'date' : 'text'}
-          />
+    <>
+      {/* Screen: inputs */}
+      <div className="footer-screen mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {(['revisadoPor', 'cargo', 'fecha'] as const).map(k => (
+          <div key={k} className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">
+              {k === 'revisadoPor' ? 'Revisado por' : k === 'cargo' ? 'Cargo' : 'Fecha'}
+            </label>
+            <input
+              className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              value={footer[k]}
+              onChange={e => onFooterChange({ ...footer, [k]: e.target.value })}
+              type={k === 'fecha' ? 'date' : 'text'}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Print: professional signature block */}
+      <div className="footer-print hidden" style={{ marginTop: '16px', borderTop: '1px solid #99f6e4', paddingTop: '10px', gap: '0', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ textAlign: 'center', minWidth: '200px' }}>
+          <div style={{ borderTop: '1px solid #374151', marginBottom: '4px', marginTop: '32px', width: '180px', margin: '32px auto 4px' }} />
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#134e4a' }}>{footer.revisadoPor || '________________________________'}</div>
+          <div style={{ fontSize: '8px', color: '#0f766e' }}>{footer.cargo || 'Cargo'}</div>
+          <div style={{ fontSize: '7px', color: '#6b7280', marginTop: '1px' }}>Revisado y aprobado por</div>
         </div>
-      ))}
-    </div>
+        <div style={{ textAlign: 'center', fontSize: '8px', color: '#6b7280', flex: 1, paddingBottom: '4px' }}>
+          <div style={{ fontWeight: 600, color: '#0f766e', fontSize: '9px' }}>VIVENS — Clínica Renal El Puyo</div>
+          <div>Control de Temperatura y Humedad</div>
+          <div style={{ marginTop: '2px', fontSize: '7px' }}>Documento generado digitalmente</div>
+        </div>
+        <div style={{ textAlign: 'center', minWidth: '160px' }}>
+          <div style={{ borderTop: '1px solid #374151', marginBottom: '4px', marginTop: '32px', width: '140px', margin: '32px auto 4px' }} />
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#134e4a' }}>{fechaDisplay || '________________'}</div>
+          <div style={{ fontSize: '7px', color: '#6b7280', marginTop: '1px' }}>Fecha de revisión</div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -100,7 +127,7 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
       </div>
 
       {/* ── MOBILE: card per day ── */}
-      <div className="md:hidden space-y-2 no-print">
+      <div className="mobile-cards md:hidden space-y-2 no-print">
         {entries.map((e, i) => {
           const tProm = calcProm(e.tempManana, e.tempTarde);
           const hProm = calcProm(e.humManana, e.humTarde);
@@ -210,7 +237,7 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
       </div>
 
       {/* ── DESKTOP: table ── */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="desktop-table hidden md:block overflow-x-auto">
         <table className="w-full border-collapse text-sm min-w-[960px]">
           <thead>
             <tr>
@@ -343,7 +370,7 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
       </div>
 
       {/* ── MOBILE cards ── */}
-      <div className="md:hidden space-y-2 no-print">
+      <div className="mobile-cards md:hidden space-y-2 no-print">
         {entries.map((e, i) => {
           const tProm = calcProm(e.tempManana, e.tempTarde);
           const locked = lockedDays.has(e.dia);
@@ -415,7 +442,7 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
       </div>
 
       {/* ── DESKTOP table ── */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="desktop-table hidden md:block overflow-x-auto">
         <table className="w-full border-collapse text-sm min-w-[750px]">
           <thead>
             <tr>

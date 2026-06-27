@@ -38,7 +38,7 @@ export default function HeaderForm({ data, onChange, equipoLabel = 'No. Termohig
   const years = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
 
   return (
-    <div className="bg-white border border-teal-200 rounded-lg p-4 mb-4">
+    <div className="screen-header bg-white border border-teal-200 rounded-lg p-4 mb-4">
       {/* Title */}
       <div className="text-center mb-4">
         <p className="text-xs text-teal-600 font-semibold uppercase tracking-widest">Clínica Renal El Puyo — VIVENS</p>
