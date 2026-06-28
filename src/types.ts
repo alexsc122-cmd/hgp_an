@@ -2,7 +2,7 @@ export type AnexoType = 'anexo10' | 'anexo11';
 
 // ─── Usuarios ─────────────────────────────────────────────────────────────────
 
-export type UserRole = 'admin' | 'operador';
+export type UserRole = 'admin' | 'validador' | 'operador';
 
 export interface Usuario {
   id: string;
@@ -52,16 +52,26 @@ export interface FooterInfo {
   fecha: string;
 }
 
+export interface MesValidacion {
+  validadoPor: string;      // nombre del usuario que validó
+  validadoCargo: string;    // cargo
+  validadoFecha: string;    // fecha del footer
+  validadoEn: number;       // timestamp ms
+  validadoUsuario: string;  // login
+}
+
 export interface Anexo10Data {
   header: HeaderInfo;
   footer: FooterInfo;
   entries: DailyEntry[];
+  validacion?: MesValidacion;
 }
 
 export interface Anexo11Data {
   header: HeaderInfo;
   footer: FooterInfo;
   entries: RefrigDailyEntry[];
+  validacion?: MesValidacion;
 }
 
 export const MESES = [

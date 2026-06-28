@@ -51,8 +51,8 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
       setError('El correo electrónico no es válido.');
       return;
     }
-    if (rol === 'operador' && termosAsignados.length === 0) {
-      setError('Debes asignar al menos un equipo al operador.');
+    if ((rol === 'operador' || rol === 'validador') && termosAsignados.length === 0) {
+      setError('Debes asignar al menos un equipo al operador/validador.');
       return;
     }
     const saved: Usuario = {
@@ -124,7 +124,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-2">Rol</label>
             <div className="flex gap-3">
-              {(['admin', 'operador'] as UserRole[]).map(r => (
+              {(['admin', 'validador', 'operador'] as UserRole[]).map(r => (
                 <label key={r} className={`flex items-center gap-2 cursor-pointer flex-1 border rounded-lg px-3 py-2 transition-colors ${rol === r ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}>
                   <input
                     type="radio"
@@ -135,20 +135,20 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
                     className="accent-blue-700"
                   />
                   <div>
-                    <div className="text-sm font-semibold">{r === 'admin' ? '👑 Administrador' : '👤 Operador'}</div>
-                    <div className="text-xs text-gray-400">{r === 'admin' ? 'Acceso total' : 'Solo sus equipos'}</div>
+                    <div className="text-sm font-semibold">{r === 'admin' ? '👑 Administrador' : r === 'validador' ? '🔏 Validador' : '👤 Operador'}</div>
+                    <div className="text-xs text-gray-400">{r === 'admin' ? 'Acceso total' : r === 'validador' ? 'Registra y valida mes' : 'Solo registra datos'}</div>
                   </div>
                 </label>
               ))}
             </div>
           </div>
 
-          {/* Asignación de termohigrómetros — solo para operadores */}
-          {rol === 'operador' && (
+          {/* Asignación de termohigrómetros — para operadores y validadores */}
+          {(rol === 'operador' || rol === 'validador') && (
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2">
                 Equipos asignados
-                <span className="ml-2 font-normal text-gray-400">— el operador solo verá estos equipos</span>
+                <span className="ml-2 font-normal text-gray-400">— el usuario solo verá estos equipos</span>
               </label>
 
               {termos.length === 0 ? (

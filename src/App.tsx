@@ -687,7 +687,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
             <div className="text-xs font-semibold text-white">{currentUser.nombre}</div>
-            <div className="text-xs text-teal-200">{currentUser.rol === 'admin' ? '👑 Administrador' : '👤 Operador'}</div>
+            <div className="text-xs text-teal-200">{currentUser.rol === 'admin' ? '👑 Administrador' : currentUser.rol === 'validador' ? '🔏 Validador' : '👤 Operador'}</div>
           </div>
           {onReport && (
             <button
@@ -734,7 +734,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
         {/* ─── Reportes tab ─── */}
         {tab === 'reportes' && (
           <>
-            {isAdmin && (
+            {(isAdmin || currentUser.rol === 'validador') && (
               <div className="mb-6 bg-blue-900 rounded-xl p-5 flex items-center justify-between shadow">
                 <div>
                   <div className="text-white font-bold text-base">📊 Reporte de Cumplimiento de Horarios</div>
@@ -890,8 +890,8 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                       <td className="px-4 py-3 font-medium text-gray-800">{u.nombre}</td>
                       <td className="px-4 py-3 font-mono text-gray-600">{u.usuario}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-teal-100 text-teal-800'}`}>
-                          {u.rol === 'admin' ? '👑 Admin' : '👤 Operador'}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.rol === 'admin' ? 'bg-amber-100 text-amber-800' : u.rol === 'validador' ? 'bg-purple-100 text-purple-800' : 'bg-teal-100 text-teal-800'}`}>
+                          {u.rol === 'admin' ? '👑 Admin' : u.rol === 'validador' ? '🔏 Validador' : '👤 Operador'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{new Date(u.creadoEn).toLocaleDateString('es-EC')}</td>
@@ -1373,7 +1373,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     lockedDays={lockedDays10}
                     onLockedDaysChange={handleLockChange10}
                     currentUserName={currentUser.nombre}
-                    isAdmin={currentUser.rol === 'admin'}
+                    canUnlock={currentUser.rol === 'admin' || currentUser.rol === 'validador'}
                   />
                   <Anexo10Chart
                     entries={anexo10.entries}
@@ -1407,7 +1407,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     lockedDays={lockedDays11}
                     onLockedDaysChange={handleLockChange11}
                     currentUserName={currentUser.nombre}
-                    isAdmin={currentUser.rol === 'admin'}
+                    canUnlock={currentUser.rol === 'admin' || currentUser.rol === 'validador'}
                   />
                   <Anexo11Chart
                     entries={anexo11.entries}
@@ -1473,7 +1473,7 @@ export default function App() {
     fsLoadExceptionalDays().then(setExceptionalDays).catch(() => {});
   }, [authReady, currentUser?.id]);
 
-  // Visible termos: admin sees all, operador sees only assigned ones
+  // Visible termos: admin sees all, operador/validador see only assigned ones
   const visibleTermos = currentUser
     ? currentUser.rol === 'admin'
       ? termos
@@ -1568,7 +1568,7 @@ export default function App() {
     );
   }
 
-  if (showReport && currentUser.rol === 'admin') {
+  if (showReport && (currentUser.rol === 'admin' || currentUser.rol === 'validador')) {
     return (
       <ComplianceReport
         termos={visibleTermos}
@@ -1590,7 +1590,7 @@ export default function App() {
         onEdit={t => { setEditTarget(t); setModalOpen(true); }}
         onDelete={handleDelete}
         onLogout={handleLogout}
-        onReport={currentUser.rol === 'admin' ? () => setShowReport(true) : undefined}
+        onReport={currentUser.rol !== 'operador' ? () => setShowReport(true) : undefined}
         onUbicacionRename={(oldNombre, newNombre) =>
           setTermos(prev => prev.map(t => t.ubicacion === oldNombre ? { ...t, ubicacion: newNombre } : t))
         }

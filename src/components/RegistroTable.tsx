@@ -97,7 +97,7 @@ interface Anexo10TableProps {
   lockedDays: Set<number>;
   onLockedDaysChange: (locked: Set<number>) => void;
   currentUserName?: string;
-  isAdmin?: boolean;
+  canUnlock?: boolean;
 }
 
 function rowAlert(e: DailyEntry): boolean {
@@ -109,7 +109,7 @@ function rowAlert(e: DailyEntry): boolean {
   );
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock }: Anexo10TableProps) {
   const update = (i: number, field: keyof DailyEntry, val: string) => {
     const tsField = (field === 'tempManana' || field === 'humManana') ? 'tsManana'
                   : (field === 'tempTarde' || field === 'humTarde') ? 'tsTarde'
@@ -122,7 +122,7 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
   const toggleLock = (dia: number) => {
     const isLocked = lockedDays.has(dia);
     if (isLocked) {
-      if (!isAdmin) { alert('Solo un administrador puede desbloquear un día confirmado.'); return; }
+      if (!canUnlock) { alert('Solo un administrador o validador puede desbloquear un día confirmado.'); return; }
       if (!window.confirm('¿Deseas editar este día?')) return;
       const next = new Set(lockedDays); next.delete(dia); onLockedDaysChange(next);
     } else {
@@ -353,7 +353,7 @@ interface Anexo11TableProps {
   lockedDays: Set<number>;
   onLockedDaysChange: (locked: Set<number>) => void;
   currentUserName?: string;
-  isAdmin?: boolean;
+  canUnlock?: boolean;
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -361,7 +361,7 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
     isOutOfRangeTemp11(calcProm(e.tempManana, e.tempTarde));
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock }: Anexo11TableProps) {
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
     const tsField = field === 'tempManana' ? 'tsManana' : field === 'tempTarde' ? 'tsTarde' : null;
     onChange(entries.map((e, idx) =>
@@ -372,7 +372,7 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
   const toggleLock = (dia: number) => {
     const isLocked = lockedDays.has(dia);
     if (isLocked) {
-      if (!isAdmin) { alert('Solo un administrador puede desbloquear un día confirmado.'); return; }
+      if (!canUnlock) { alert('Solo un administrador o validador puede desbloquear un día confirmado.'); return; }
       if (!window.confirm('¿Deseas editar este día?')) return;
       const next = new Set(lockedDays); next.delete(dia); onLockedDaysChange(next);
     } else {
