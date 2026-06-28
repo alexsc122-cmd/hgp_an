@@ -98,6 +98,8 @@ interface Anexo10TableProps {
   onLockedDaysChange: (locked: Set<number>) => void;
   currentUserName?: string;
   canUnlock?: boolean;
+  year: number;
+  month: number;
 }
 
 function rowAlert(e: DailyEntry): boolean {
@@ -109,7 +111,9 @@ function rowAlert(e: DailyEntry): boolean {
   );
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month }: Anexo10TableProps) {
+  const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
+  const dayLabel = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 6 ? 'Sáb' : d === 0 ? 'Dom' : null; };
   const update = (i: number, field: keyof DailyEntry, val: string) => {
     const tsField = (field === 'tempManana' || field === 'humManana') ? 'tsManana'
                   : (field === 'tempTarde' || field === 'humTarde') ? 'tsTarde'
@@ -162,12 +166,16 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
           const hProm = calcProm(e.humManana, e.humTarde);
           const locked = lockedDays.has(e.dia);
           const alert = rowAlert(e);
-          const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : 'bg-white border-teal-100';
+          const weekend = isWeekend(e.dia);
+          const label = dayLabel(e.dia);
+          const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : weekend ? 'bg-slate-100 border-slate-200' : 'bg-white border-teal-100';
           return (
             <div key={e.dia} className={`rounded-xl border ${cardBg} overflow-hidden`}>
               {/* Day header */}
-              <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : 'bg-teal-50'}`}>
-                <span className="font-bold text-teal-900 text-base">Día {e.dia}</span>
+              <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : weekend ? 'bg-slate-200' : 'bg-teal-50'}`}>
+                <span className={`font-bold text-base ${weekend ? 'text-slate-500' : 'text-teal-900'}`}>
+                  Día {e.dia}{label && <span className="ml-1.5 text-xs font-semibold uppercase tracking-wide opacity-70">{label}</span>}
+                </span>
                 <div className="flex items-center gap-2">
                   {alert && !locked && <span className="text-xs text-red-600 font-semibold">⚠ Fuera de rango</span>}
                   {locked && <span className="text-xs text-gray-500">Confirmado</span>}
@@ -287,10 +295,17 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
               const hProm = calcProm(e.humManana, e.humTarde);
               const alert = rowAlert(e);
               const locked = lockedDays.has(e.dia);
-              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              const weekend = isWeekend(e.dia);
+              const label = dayLabel(e.dia);
+              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
               return (
                 <tr key={e.dia} className={rowBg}>
-                  <td className={`${tdCls} text-center font-medium text-teal-800 w-10`}>{e.dia}</td>
+                  <td className={`${tdCls} text-center font-medium w-10 ${weekend ? 'text-slate-400' : 'text-teal-800'}`}>
+                    <div className="flex flex-col items-center leading-tight">
+                      <span>{e.dia}</span>
+                      {label && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{label}</span>}
+                    </div>
+                  </td>
                   {(['tempManana','tempTarde'] as const).map(f => (
                     <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e[f]))} w-20`}>
                       {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
@@ -354,6 +369,8 @@ interface Anexo11TableProps {
   onLockedDaysChange: (locked: Set<number>) => void;
   currentUserName?: string;
   canUnlock?: boolean;
+  year: number;
+  month: number;
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -361,7 +378,9 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
     isOutOfRangeTemp11(calcProm(e.tempManana, e.tempTarde));
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month }: Anexo11TableProps) {
+  const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
+  const dayLabel = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 6 ? 'Sáb' : d === 0 ? 'Dom' : null; };
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
     const tsField = field === 'tempManana' ? 'tsManana' : field === 'tempTarde' ? 'tsTarde' : null;
     onChange(entries.map((e, idx) =>
@@ -407,11 +426,15 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
           const tProm = calcProm(e.tempManana, e.tempTarde);
           const locked = lockedDays.has(e.dia);
           const alert = rowAlert11(e);
-          const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : 'bg-white border-teal-100';
+          const weekend = isWeekend(e.dia);
+          const label = dayLabel(e.dia);
+          const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : weekend ? 'bg-slate-100 border-slate-200' : 'bg-white border-teal-100';
           return (
             <div key={e.dia} className={`rounded-xl border ${cardBg} overflow-hidden`}>
-              <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : 'bg-teal-50'}`}>
-                <span className="font-bold text-teal-900 text-base">Día {e.dia}</span>
+              <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : weekend ? 'bg-slate-200' : 'bg-teal-50'}`}>
+                <span className={`font-bold text-base ${weekend ? 'text-slate-500' : 'text-teal-900'}`}>
+                  Día {e.dia}{label && <span className="ml-1.5 text-xs font-semibold uppercase tracking-wide opacity-70">{label}</span>}
+                </span>
                 <div className="flex items-center gap-2">
                   {alert && !locked && <span className="text-xs text-red-600 font-semibold">⚠ Fuera de rango</span>}
                   {locked && <span className="text-xs text-gray-500">Confirmado</span>}
@@ -493,10 +516,17 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
               const tProm = calcProm(e.tempManana, e.tempTarde);
               const alert = rowAlert11(e);
               const locked = lockedDays.has(e.dia);
-              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              const weekend = isWeekend(e.dia);
+              const label = dayLabel(e.dia);
+              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
               return (
                 <tr key={e.dia} className={rowBg}>
-                  <td className={`${tdCls} text-center font-medium text-teal-800 w-10`}>{e.dia}</td>
+                  <td className={`${tdCls} text-center font-medium w-10 ${weekend ? 'text-slate-400' : 'text-teal-800'}`}>
+                    <div className="flex flex-col items-center leading-tight">
+                      <span>{e.dia}</span>
+                      {label && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{label}</span>}
+                    </div>
+                  </td>
                   {(['tempManana','tempTarde'] as const).map(f => (
                     <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e[f]))} w-24`}>
                       {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>

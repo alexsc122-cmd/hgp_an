@@ -1423,6 +1423,8 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     onLockedDaysChange={handleLockChange10}
                     currentUserName={currentUser.nombre}
                     canUnlock={currentUser.rol === 'admin' || currentUser.rol === 'validador'}
+                    year={year10}
+                    month={month10}
                   />
                   <Anexo10Chart
                     entries={anexo10.entries}
@@ -1457,6 +1459,8 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     onLockedDaysChange={handleLockChange11}
                     currentUserName={currentUser.nombre}
                     canUnlock={currentUser.rol === 'admin' || currentUser.rol === 'validador'}
+                    year={year11}
+                    month={month11}
                   />
                   <Anexo11Chart
                     entries={anexo11.entries}
