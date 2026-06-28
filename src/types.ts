@@ -23,6 +23,8 @@ export interface DailyEntry {
   humTarde: string;
   nombre: string;
   observaciones: string;
+  tsManana?: number;  // Unix ms — hidden, only for compliance report
+  tsTarde?: number;
 }
 
 export interface RefrigDailyEntry {
@@ -31,6 +33,8 @@ export interface RefrigDailyEntry {
   tempTarde: string;
   nombre: string;
   observaciones: string;
+  tsManana?: number;
+  tsTarde?: number;
 }
 
 export interface HeaderInfo {

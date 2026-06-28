@@ -111,7 +111,12 @@ function rowAlert(e: DailyEntry): boolean {
 
 export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo10TableProps) {
   const update = (i: number, field: keyof DailyEntry, val: string) => {
-    onChange(entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e));
+    const tsField = (field === 'tempManana' || field === 'humManana') ? 'tsManana'
+                  : (field === 'tempTarde' || field === 'humTarde') ? 'tsTarde'
+                  : null;
+    onChange(entries.map((e, idx) =>
+      idx === i ? { ...e, [field]: val, ...(tsField && val !== '' ? { [tsField]: Date.now() } : {}) } : e
+    ));
   };
 
   const toggleLock = (dia: number) => {
@@ -358,7 +363,10 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
 
 export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, isAdmin }: Anexo11TableProps) {
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
-    onChange(entries.map((e, idx) => idx === i ? { ...e, [field]: val } : e));
+    const tsField = field === 'tempManana' ? 'tsManana' : field === 'tempTarde' ? 'tsTarde' : null;
+    onChange(entries.map((e, idx) =>
+      idx === i ? { ...e, [field]: val, ...(tsField && val !== '' ? { [tsField]: Date.now() } : {}) } : e
+    ));
   };
 
   const toggleLock = (dia: number) => {

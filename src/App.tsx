@@ -29,6 +29,7 @@ import UserModal from './components/UserModal';
 import ReportesTab from './components/ReportesTab';
 import PrintHeader from './components/PrintHeader';
 import VerificationPage from './components/VerificationPage';
+import ComplianceReport from './components/ComplianceReport';
 
 function clearUnlockedNombres<T extends { dia: number; nombre: string }>(entries: T[], locked: Set<number>): T[] {
   return entries.map(e => locked.has(e.dia) ? e : { ...e, nombre: '' });
@@ -184,9 +185,10 @@ interface DashboardProps {
   onEdit: (t: Termohigrometro) => void;
   onDelete: (id: string) => void;
   onLogout: () => void;
+  onReport?: () => void;
 }
 
-function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout }: DashboardProps) {
+function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout, onReport }: DashboardProps) {
   const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios' | 'ubicaciones' | 'configuracion'>('equipos');
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -209,7 +211,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
             fsLoadRegistro(t.id, year, month),
             fsLoadLockedDays(t.id, year, month),
           ]);
-          const isLocked = locked.has(today);
+          const isLocked = locked.days.has(today);
           let manana = false;
           let tarde = false;
           if (registro) {
@@ -298,6 +300,14 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
             <div className="text-xs font-semibold text-white">{currentUser.nombre}</div>
             <div className="text-xs text-teal-200">{currentUser.rol === 'admin' ? '👑 Administrador' : '👤 Operador'}</div>
           </div>
+          {onReport && (
+            <button
+              onClick={onReport}
+              className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+            >
+              📊 Reporte
+            </button>
+          )}
           <button
             onClick={onLogout}
             className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
@@ -532,6 +542,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
     entries: emptyEntries10(currentYear, currentMonthNum),
   });
   const [lockedDays10, setLockedDays10] = useState<Set<number>>(new Set());
+  const [lockedAt10, setLockedAt10] = useState<Record<number, number>>({});
   const [loadedKey10, setLoadedKey10] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
 
   // ─── Anexo 11 state ───
@@ -541,6 +552,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
     entries: emptyEntries11(currentYear, currentMonthNum),
   });
   const [lockedDays11, setLockedDays11] = useState<Set<number>>(new Set());
+  const [lockedAt11, setLockedAt11] = useState<Record<number, number>>({});
   const [loadedKey11, setLoadedKey11] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -570,7 +582,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
         if (isAmbiental) {
           const base = registro as Anexo10Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(currentYear, currentMonthNum);
-          const entries = clearUnlockedNombres(rawEntries, locked);
+          const entries = clearUnlockedNombres(rawEntries, locked.days);
           const savedHeader = base?.header;
           const header = {
             // Config fields always win — changing config updates all records
@@ -585,11 +597,12 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
           setAnexo10({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
-          setLockedDays10(locked);
+          setLockedDays10(locked.days);
+          setLockedAt10(locked.lockedAt);
         } else {
           const base = registro as Anexo11Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
-          const entries = clearUnlockedNombres(rawEntries, locked);
+          const entries = clearUnlockedNombres(rawEntries, locked.days);
           const savedHeader = base?.header;
           const header = {
             // Config fields always win — changing config updates all records
@@ -604,7 +617,8 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
           setAnexo11({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
-          setLockedDays11(locked);
+          setLockedDays11(locked.days);
+          setLockedAt11(locked.lockedAt);
         }
         lockedDaysReady.current = true;
         setMonthsWithData(mwd);
@@ -664,24 +678,24 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
     const y = parseInt(anexo10.header.anio);
     const m = parseInt(anexo10.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
-      fsSaveLockedDays(termo.id, y, m, lockedDays10).catch(() => {
+      fsSaveLockedDays(termo.id, y, m, lockedDays10, lockedAt10).catch(() => {
         alert('Error al guardar días bloqueados.');
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockedDays10, termo.id]);
+  }, [lockedDays10, lockedAt10, termo.id]);
 
   useEffect(() => {
     if (!lockedDaysReady.current) return;
     const y = parseInt(anexo11.header.anio);
     const m = parseInt(anexo11.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
-      fsSaveLockedDays(termo.id, y, m, lockedDays11).catch(() => {
+      fsSaveLockedDays(termo.id, y, m, lockedDays11, lockedAt11).catch(() => {
         alert('Error al guardar días bloqueados.');
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockedDays11, termo.id]);
+  }, [lockedDays11, lockedAt11, termo.id]);
 
   // Navigation handler — loads data for selected year/month
   const handleNavigate = useCallback(async (year: number, month: number) => {
@@ -699,12 +713,13 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           ]);
           const base = registro as Anexo10Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
-          const entries = clearUnlockedNombres(rawEntries, locked);
+          const entries = clearUnlockedNombres(rawEntries, locked.days);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
           const footer10 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer10.revisadoPor) footer10.revisadoPor = currentUser.nombre;
           setAnexo10({ ...(base ?? { header, footer: footer10 }), header, footer: footer10, entries });
-          setLockedDays10(locked);
+          setLockedDays10(locked.days);
+          setLockedAt10(locked.lockedAt);
           setLoadedKey10(newKey);
           lockedDaysReady.current = true;
         }
@@ -716,12 +731,13 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           ]);
           const base = registro as Anexo11Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
-          const entries = clearUnlockedNombres(rawEntries, locked);
+          const entries = clearUnlockedNombres(rawEntries, locked.days);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
           const footer11 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
           if (!footer11.revisadoPor) footer11.revisadoPor = currentUser.nombre;
           setAnexo11({ ...(base ?? { header, footer: footer11 }), header, footer: footer11, entries });
-          setLockedDays11(locked);
+          setLockedDays11(locked.days);
+          setLockedAt11(locked.lockedAt);
           setLoadedKey11(newKey);
           lockedDaysReady.current = true;
         }
@@ -747,7 +763,8 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
         const base = registro as Anexo10Data | null;
         const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(y, m);
         setAnexo10({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
-        setLockedDays10(locked);
+        setLockedDays10(locked.days);
+        setLockedAt10(locked.lockedAt);
         setLoadedKey10(newKey);
         setSelectedYear(y);
         setSelectedMonth(m);
@@ -772,7 +789,8 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
         const base = registro as Anexo11Data | null;
         const entries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(y, m);
         setAnexo11({ ...(base ?? { header, footer: { revisadoPor: '', cargo: '', fecha: '' } }), header, entries });
-        setLockedDays11(locked);
+        setLockedDays11(locked.days);
+        setLockedAt11(locked.lockedAt);
         setLoadedKey11(newKey);
         setSelectedYear(y);
         setSelectedMonth(m);
@@ -791,6 +809,27 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
 
   const mesNombre = MESES[selectedMonth - 1];
   const verifyUrl = `https://hgp-an.vercel.app/?verify=${termo.id}_${selectedYear}_${String(selectedMonth).padStart(2, '0')}`;
+
+  // Wrap lock changes to also record the timestamp when a day is locked
+  const handleLockChange10 = useCallback((newDays: Set<number>) => {
+    setLockedAt10(prev => {
+      const next = { ...prev };
+      newDays.forEach(d => { if (!lockedDays10.has(d)) next[d] = Date.now(); });
+      lockedDays10.forEach(d => { if (!newDays.has(d)) delete next[d]; });
+      return next;
+    });
+    setLockedDays10(newDays);
+  }, [lockedDays10]);
+
+  const handleLockChange11 = useCallback((newDays: Set<number>) => {
+    setLockedAt11(prev => {
+      const next = { ...prev };
+      newDays.forEach(d => { if (!lockedDays11.has(d)) next[d] = Date.now(); });
+      lockedDays11.forEach(d => { if (!newDays.has(d)) delete next[d]; });
+      return next;
+    });
+    setLockedDays11(newDays);
+  }, [lockedDays11]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex flex-col">
@@ -887,7 +926,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     footer={anexo10.footer}
                     onFooterChange={footer => setAnexo10(prev => ({ ...prev, footer }))}
                     lockedDays={lockedDays10}
-                    onLockedDaysChange={setLockedDays10}
+                    onLockedDaysChange={handleLockChange10}
                     currentUserName={currentUser.nombre}
                     isAdmin={currentUser.rol === 'admin'}
                   />
@@ -921,7 +960,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     footer={anexo11.footer}
                     onFooterChange={footer => setAnexo11(prev => ({ ...prev, footer }))}
                     lockedDays={lockedDays11}
-                    onLockedDaysChange={setLockedDays11}
+                    onLockedDaysChange={handleLockChange11}
                     currentUserName={currentUser.nombre}
                     isAdmin={currentUser.rol === 'admin'}
                   />
@@ -996,6 +1035,7 @@ export default function App() {
   const [selectedTermo, setSelectedTermo] = useState<Termohigrometro | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Termohigrometro | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   const handleLogin = (user: Usuario) => setCurrentUser(user);
 
@@ -1061,6 +1101,15 @@ export default function App() {
     );
   }
 
+  if (showReport && currentUser.rol === 'admin') {
+    return (
+      <ComplianceReport
+        termos={visibleTermos}
+        onBack={() => setShowReport(false)}
+      />
+    );
+  }
+
   return (
     <>
       <Dashboard
@@ -1074,6 +1123,7 @@ export default function App() {
         onEdit={t => { setEditTarget(t); setModalOpen(true); }}
         onDelete={handleDelete}
         onLogout={handleLogout}
+        onReport={currentUser.rol === 'admin' ? () => setShowReport(true) : undefined}
       />
       {modalOpen && (
         <TermoModal

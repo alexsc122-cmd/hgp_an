@@ -172,14 +172,46 @@ export async function fsLoadTermoPublic(termoId: string): Promise<Termohigrometr
 
 // ─── Días bloqueados ──────────────────────────────────────────────────────────
 
-export async function fsLoadLockedDays(termoId: string, year: number, month: number): Promise<Set<number>> {
-  const id = `locked_${registroId(termoId, year, month)}`;
-  const snap = await getDoc(doc(db, 'lockedDays', id));
-  if (!snap.exists()) return new Set();
-  return new Set((snap.data().days as number[]) ?? []);
+export interface LockedDaysData {
+  days: Set<number>;
+  lockedAt: Record<number, number>; // dia -> Unix ms when locked
 }
 
-export async function fsSaveLockedDays(termoId: string, year: number, month: number, days: Set<number>): Promise<void> {
+export async function fsLoadLockedDays(termoId: string, year: number, month: number): Promise<LockedDaysData> {
   const id = `locked_${registroId(termoId, year, month)}`;
-  await setDoc(doc(db, 'lockedDays', id), { termoId, year, month, days: Array.from(days) });
+  const snap = await getDoc(doc(db, 'lockedDays', id));
+  if (!snap.exists()) return { days: new Set(), lockedAt: {} };
+  const data = snap.data();
+  return {
+    days: new Set((data.days as number[]) ?? []),
+    lockedAt: (data.lockedAt as Record<number, number>) ?? {},
+  };
+}
+
+export async function fsSaveLockedDays(
+  termoId: string, year: number, month: number,
+  days: Set<number>, lockedAt: Record<number, number> = {}
+): Promise<void> {
+  const id = `locked_${registroId(termoId, year, month)}`;
+  await setDoc(doc(db, 'lockedDays', id), { termoId, year, month, days: Array.from(days), lockedAt });
+}
+
+// ─── Compliance report helpers ────────────────────────────────────────────────
+
+export async function fsLoadAllRegistros(
+  termos: Termohigrometro[], year: number, month: number
+): Promise<Map<string, Anexo10Data | Anexo11Data | null>> {
+  const results = await Promise.all(
+    termos.map(t => fsLoadRegistro(t.id, year, month).then(r => [t.id, r] as const))
+  );
+  return new Map(results);
+}
+
+export async function fsLoadAllLockedDays(
+  termos: Termohigrometro[], year: number, month: number
+): Promise<Map<string, LockedDaysData>> {
+  const results = await Promise.all(
+    termos.map(t => fsLoadLockedDays(t.id, year, month).then(r => [t.id, r] as const))
+  );
+  return new Map(results);
 }
