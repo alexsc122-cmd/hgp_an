@@ -481,15 +481,7 @@ export default function ReportesTab({ termos }: Props) {
             const validador = footer?.revisadoPor?.trim() || '';
             const cargo = footer?.cargo?.trim() || '';
             const fecha = footer?.fecha?.trim() || '';
-            const qrContent = [
-              `Equipo: ${termo?.nombre ?? ''}`,
-              termo?.numero ? `N° Serie: ${termo.numero}` : '',
-              `Período: ${MESES[selectedMonth - 1]} ${selectedYear}`,
-              `Tipo: ${isAmbiental ? 'Temperatura Ambiental' : 'Refrigeración'}`,
-              validador ? `Validado por: ${validador}` : '',
-              cargo ? `Cargo: ${cargo}` : '',
-              fecha ? `Fecha validación: ${fecha}` : '',
-            ].filter(Boolean).join('\n');
+            const verifyUrl = `https://hgp-an.vercel.app/?verify=${selectedTermoId}_${selectedYear}_${String(selectedMonth).padStart(2, '0')}`;
 
             return (
               <div className="print-only" style={{ display: 'none' }}>
@@ -546,28 +538,28 @@ export default function ReportesTab({ termos }: Props) {
                 )}
 
                 {/* Pie con validador y QR */}
-                {(validador || cargo || fecha) && (
-                  <div style={{ marginTop: '20px', borderTop: '1.5px solid #99f6e4', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '12px 28px 0' }}>
-                    <div>
-                      <div style={{ fontSize: '7px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
-                        Validado por
-                      </div>
-                      {validador && (
-                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#134e4a', borderBottom: '1px solid #134e4a', paddingBottom: '2px', minWidth: '160px' }}>
-                          {validador}
+                <div style={{ marginTop: '20px', borderTop: '1.5px solid #99f6e4', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '12px 28px 0' }}>
+                  <div>
+                    {(validador || cargo || fecha) && (
+                      <>
+                        <div style={{ fontSize: '7px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                          Validado por
                         </div>
-                      )}
-                      {cargo && <div style={{ fontSize: '8px', color: '#374151', marginTop: '3px' }}>{cargo}</div>}
-                      {fecha && <div style={{ fontSize: '8px', color: '#6b7280', marginTop: '2px' }}>Fecha: {fecha}</div>}
-                    </div>
-                    {qrContent && (
-                      <div style={{ textAlign: 'center' }}>
-                        <QRCodeSVG value={qrContent} size={72} level="M" />
-                        <div style={{ fontSize: '6px', color: '#6b7280', marginTop: '3px' }}>Información del reporte</div>
-                      </div>
+                        {validador && (
+                          <div style={{ fontSize: '10px', fontWeight: 700, color: '#134e4a', borderBottom: '1px solid #134e4a', paddingBottom: '2px', minWidth: '160px' }}>
+                            {validador}
+                          </div>
+                        )}
+                        {cargo && <div style={{ fontSize: '8px', color: '#374151', marginTop: '3px' }}>{cargo}</div>}
+                        {fecha && <div style={{ fontSize: '8px', color: '#6b7280', marginTop: '2px' }}>Fecha: {fecha}</div>}
+                      </>
                     )}
                   </div>
-                )}
+                  <div style={{ textAlign: 'center' }}>
+                    <QRCodeSVG value={verifyUrl} size={80} level="M" />
+                    <div style={{ fontSize: '6px', color: '#6b7280', marginTop: '3px' }}>Verificar registro</div>
+                  </div>
+                </div>
               </div>
             );
           })()}
