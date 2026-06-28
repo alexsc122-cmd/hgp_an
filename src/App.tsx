@@ -1110,11 +1110,22 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
     async function load() {
       setLoading(true);
       try {
-        const [registro, locked, mwd] = await Promise.all([
+        const [registro, locked, mwd, allUsers] = await Promise.all([
           fsLoadRegistro(termo.id, currentYear, currentMonthNum),
           fsLoadLockedDays(termo.id, currentYear, currentMonthNum),
           fsGetMonthsWithData(termo.id),
+          fsLoadUsuarios(),
         ]);
+        // resolve cargo by matching the responsible name against the user list
+        const resolveFooter = (saved: { revisadoPor: string; cargo: string; fecha: string } | undefined, fallbackName: string) => {
+          const f = saved ?? { revisadoPor: fallbackName, cargo: '', fecha: '' };
+          if (!f.revisadoPor) f.revisadoPor = fallbackName;
+          if (!f.cargo) {
+            const match = allUsers.find(u => u.nombre === f.revisadoPor);
+            f.cargo = match?.cargo || currentUser.cargo || '';
+          }
+          return f;
+        };
         if (cancelled) return;
         const mesStr = String(currentMonthNum).padStart(2, '0');
         const fallbackHeader = { institucion: config.institucion, estrategia: config.estrategia, establecimiento: config.establecimiento, direccion: config.direccion, noEquipo: termo.numero, anio: String(currentYear), mes: mesStr };
@@ -1133,9 +1144,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
-          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
-          if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
-          if (!footer.cargo) footer.cargo = currentUser.cargo || '';
+          const footer = resolveFooter(base?.footer, termo.revisadoPor || currentUser.nombre);
           setAnexo10({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays10(locked.days);
           setLockedAt10(locked.lockedAt);
@@ -1155,9 +1164,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
-          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
-          if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
-          if (!footer.cargo) footer.cargo = currentUser.cargo || '';
+          const footer = resolveFooter(base?.footer, termo.revisadoPor || currentUser.nombre);
           setAnexo11({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays11(locked.days);
           setLockedAt11(locked.lockedAt);
