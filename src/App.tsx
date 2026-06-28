@@ -1409,6 +1409,23 @@ export default function App() {
   const [editTarget, setEditTarget] = useState<Termohigrometro | null>(null);
   const [showReport, setShowReport] = useState(false);
 
+  // Push a history entry when entering a sub-screen so the browser back
+  // button returns to the dashboard instead of leaving the app.
+  useEffect(() => {
+    if (showReport || selectedTermo) {
+      window.history.pushState({ screen: 'sub' }, '');
+    }
+  }, [showReport, selectedTermo]);
+
+  useEffect(() => {
+    const handlePop = () => {
+      if (showReport) setShowReport(false);
+      else if (selectedTermo) setSelectedTermo(null);
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, [showReport, selectedTermo]);
+
   const handleLogin = (user: Usuario) => setCurrentUser(user);
 
   const handleLogout = async () => {
