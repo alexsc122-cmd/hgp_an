@@ -50,6 +50,118 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+// ─── QR Label (printable poster) ─────────────────────────────────────────────
+
+function QRLabelSection() {
+  const publicUrl = `${window.location.origin}${window.location.pathname}?publico=1`;
+  const labelRef = useRef<HTMLDivElement>(null);
+  const handlePrintLabel = useReactToPrint({
+    contentRef: labelRef,
+    documentTitle: 'Rotulo_QR_Reporte_Publico',
+    pageStyle: `
+      @page { size: A5 portrait; margin: 0; }
+      body { margin: 0; background: white; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    `,
+  });
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl border border-teal-100">
+      <h2 className="text-base font-bold text-teal-900 mb-1">📲 QR — Reporte público del mes</h2>
+      <p className="text-xs text-gray-500 mb-4">
+        Imprime el rótulo y colócalo en la puerta del área. Los inspectores del ARCSA/MSP pueden escanearlo para ver el estado de todos los equipos del mes en curso.
+      </p>
+
+      <div className="flex flex-col sm:flex-row gap-6 items-start">
+        {/* Preview */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-1.5 shrink-0">
+          <QRCodeSVG value={publicUrl} size={120} level="M" includeMargin />
+          <p className="text-xs text-gray-400 font-medium">Vista previa del QR</p>
+        </div>
+
+        <div className="flex-1 space-y-3">
+          <div className="bg-teal-50 border border-teal-100 rounded-lg px-4 py-3">
+            <p className="text-xs font-semibold text-teal-800 mb-1">URL del reporte público:</p>
+            <code className="text-xs text-teal-700 break-all">{publicUrl}</code>
+          </div>
+          <ul className="text-xs text-gray-600 space-y-1.5">
+            <li>✅ No requiere inicio de sesión</li>
+            <li>✅ Muestra datos en tiempo real del mes en curso</li>
+            <li>✅ El inspector puede imprimir desde su celular</li>
+          </ul>
+          <button
+            onClick={() => handlePrintLabel()}
+            className="flex items-center gap-2 bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          >
+            🖨️ Imprimir rótulo QR
+          </button>
+        </div>
+      </div>
+
+      {/* Hidden print label — A5 poster */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div ref={labelRef}>
+          <div style={{
+            width: '148mm', minHeight: '210mm', background: 'white',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', padding: '12mm', boxSizing: 'border-box',
+            fontFamily: 'system-ui, sans-serif',
+          }}>
+            {/* Top teal bar */}
+            <div style={{
+              width: '100%', background: 'linear-gradient(90deg, #0f766e, #0d9488)',
+              borderRadius: '10px', padding: '14px 20px', marginBottom: '24px', textAlign: 'center',
+            }}>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '9px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>
+                Clínica Renal El Puyo — VIVENS
+              </div>
+              <div style={{ color: 'white', fontSize: '16px', fontWeight: 800, lineHeight: 1.3 }}>
+                Control de Temperatura y Humedad
+              </div>
+            </div>
+
+            {/* Instruction */}
+            <div style={{ fontSize: '13px', color: '#374151', textAlign: 'center', marginBottom: '20px', lineHeight: 1.5 }}>
+              Escanea el código QR para ver el estado de los registros de temperatura del mes en curso.
+            </div>
+
+            {/* QR */}
+            <div style={{
+              border: '3px solid #0d9488', borderRadius: '16px', padding: '16px',
+              background: 'white', marginBottom: '20px',
+              boxShadow: '0 4px 20px rgba(13,148,136,0.15)',
+            }}>
+              <QRCodeSVG value={publicUrl} size={180} level="H" includeMargin={false} />
+            </div>
+
+            {/* URL */}
+            <div style={{
+              background: '#f0fdfa', border: '1px solid #99f6e4', borderRadius: '8px',
+              padding: '8px 16px', marginBottom: '24px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '8px', color: '#0f766e', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '3px' }}>
+                URL del reporte
+              </div>
+              <div style={{ fontSize: '10px', color: '#0f766e', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {publicUrl}
+              </div>
+            </div>
+
+            {/* Footer note */}
+            <div style={{
+              fontSize: '9px', color: '#9ca3af', textAlign: 'center', lineHeight: 1.6,
+              borderTop: '1px solid #e5e7eb', paddingTop: '12px', width: '100%',
+            }}>
+              Documento para uso de organismos de control (ARCSA / MSP)<br />
+              No requiere inicio de sesión · Datos en tiempo real
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Configuración Tab ───────────────────────────────────────────────────────
 
 function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysChange }: {
@@ -267,44 +379,7 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
       </div>
 
       {/* QR Reporte Público */}
-      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl border border-teal-100">
-        <h2 className="text-base font-bold text-teal-900 mb-1">📲 QR — Reporte público del mes</h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Imprime este código QR y colócalo en la puerta del área. Los inspectores del ARCSA/MSP pueden escanearlo para ver el estado de todos los equipos del mes en curso.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-6 items-start">
-          <div className="bg-white border-2 border-teal-200 rounded-xl p-4 inline-flex flex-col items-center gap-2">
-            <QRCodeSVG
-              value={`${window.location.origin}${window.location.pathname}?publico=1`}
-              size={160}
-              level="M"
-              includeMargin
-            />
-            <p className="text-xs text-gray-500 font-medium">Escanear para ver reporte</p>
-          </div>
-          <div className="flex-1 space-y-3">
-            <div className="bg-teal-50 border border-teal-100 rounded-lg px-4 py-3">
-              <p className="text-xs font-semibold text-teal-800 mb-1">URL del reporte público:</p>
-              <code className="text-xs text-teal-700 break-all">
-                {`${window.location.origin}${window.location.pathname}?publico=1`}
-              </code>
-            </div>
-            <ul className="text-xs text-gray-600 space-y-1.5">
-              <li>✅ No requiere inicio de sesión</li>
-              <li>✅ Muestra datos en tiempo real del mes en curso</li>
-              <li>✅ Incluye todos los equipos y lecturas diarias</li>
-              <li>✅ El inspector puede imprimir desde su celular</li>
-              <li>⚠️ Los datos de temperatura son visibles públicamente</li>
-            </ul>
-            <button
-              onClick={() => window.print()}
-              className="text-xs bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-            >
-              🖨️ Imprimir esta página para obtener el QR
-            </button>
-          </div>
-        </div>
-      </div>
+      <QRLabelSection />
 
       {/* Reset */}
       <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl border border-red-100">
