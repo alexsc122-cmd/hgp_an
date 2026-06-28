@@ -339,7 +339,26 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* ─── Reportes tab ─── */}
         {tab === 'reportes' && (
-          <ReportesTab termos={termos} />
+          <>
+            {isAdmin && (
+              <div className="mb-6 bg-blue-900 rounded-xl p-5 flex items-center justify-between shadow">
+                <div>
+                  <div className="text-white font-bold text-base">📊 Reporte de Cumplimiento de Horarios</div>
+                  <div className="text-blue-200 text-sm mt-1">
+                    Verifica si los registros de temperatura se tomaron en el horario establecido por la norma farmacéutica.
+                    Exporta a Excel o PDF.
+                  </div>
+                </div>
+                <button
+                  onClick={onReport}
+                  className="ml-6 shrink-0 bg-white text-blue-900 font-bold px-5 py-2.5 rounded-lg hover:bg-blue-50 transition-colors text-sm"
+                >
+                  Ver reporte →
+                </button>
+              </div>
+            )}
+            <ReportesTab termos={termos} />
+          </>
         )}
 
         {/* ─── Equipos tab ─── */}
