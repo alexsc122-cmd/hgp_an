@@ -136,9 +136,9 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
                     onChange={e => setRevisadoPor(e.target.value)}
                   >
                     <option value="">— Selecciona un usuario —</option>
-                    {usuarios.map(u => (
+                    {usuarios.filter(u => u.rol !== 'operador').map(u => (
                       <option key={u.id} value={u.nombre}>
-                        {u.nombre} ({u.rol === 'admin' ? 'Admin' : u.rol === 'validador' ? 'Validador' : 'Operador'})
+                        {u.nombre} ({u.rol === 'admin' ? 'Admin' : 'Validador'})
                       </option>
                     ))}
                   </select>
