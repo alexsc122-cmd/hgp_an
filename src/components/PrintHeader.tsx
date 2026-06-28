@@ -8,9 +8,10 @@ interface Props {
   verifyUrl: string;
   diasConfirmados: number;
   totalDias: number;
+  ubicacion?: string;
 }
 
-export default function PrintHeader({ title, subtitle, header, verifyUrl, diasConfirmados, totalDias }: Props) {
+export default function PrintHeader({ title, subtitle, header, verifyUrl, diasConfirmados, totalDias, ubicacion }: Props) {
   const mesNombre = MESES[parseInt(header.mes) - 1] ?? header.mes;
 
   return (
@@ -51,6 +52,7 @@ export default function PrintHeader({ title, subtitle, header, verifyUrl, diasCo
               ['ESTABLECIMIENTO', header.establecimiento, '18%'],
               ['DIRECCIÓN', header.direccion, '18%'],
               ['NO. EQUIPO', header.noEquipo, '9%'],
+              ...(ubicacion !== undefined ? [['UBICACIÓN', ubicacion, '14%'] as [string, string, string]] : []),
               ['AÑO', header.anio, '5%'],
               ['MES', mesNombre, '6%'],
             ].map(([label, value, width]) => (

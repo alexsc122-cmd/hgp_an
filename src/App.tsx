@@ -1515,6 +1515,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
                     verifyUrl={verifyUrl}
                     diasConfirmados={lockedDays10.size}
                     totalDias={anexo10.entries.length}
+                    ubicacion={termo.ubicacion}
                   />
                   <HeaderForm
                     data={anexo10.header}
@@ -1554,6 +1555,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
                     verifyUrl={verifyUrl}
                     diasConfirmados={lockedDays11.size}
                     totalDias={anexo11.entries.length}
+                    ubicacion={termo.ubicacion}
                   />
                   <HeaderForm
                     data={anexo11.header}
