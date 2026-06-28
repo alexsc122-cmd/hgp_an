@@ -1085,7 +1085,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     equipoLabel="No. Termohigrómetro"
                     anexoTitle="ANEXO 10 — REGISTRO DE TEMPERATURA Y HUMEDAD AMBIENTAL"
                     anexoSubtitle="Almacén / Bodega Farmacéutica"
-                    lockedFields={(['institucion','estrategia','establecimiento','direccion'] as const).filter(k => !!config[k])}
+                    lockedFields={(['institucion','estrategia','establecimiento','direccion','noEquipo'] as const).filter(k => k === 'noEquipo' || !!config[k as keyof AppConfig])}
                   />
                   <Anexo10Table
                     entries={anexo10.entries}
@@ -1119,7 +1119,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     equipoLabel="No. Equipo de Refrigeración"
                     anexoTitle="ANEXO 11 — REGISTRO DE TEMPERATURA DE REFRIGERACIÓN"
                     anexoSubtitle="Almacén / Cadena de Frío Farmacéutica"
-                    lockedFields={(['institucion','estrategia','establecimiento','direccion'] as const).filter(k => !!config[k])}
+                    lockedFields={(['institucion','estrategia','establecimiento','direccion','noEquipo'] as const).filter(k => k === 'noEquipo' || !!config[k as keyof AppConfig])}
                   />
                   <Anexo11Table
                     entries={anexo11.entries}
