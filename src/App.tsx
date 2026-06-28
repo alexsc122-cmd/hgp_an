@@ -1591,9 +1591,10 @@ export default function App() {
         onDelete={handleDelete}
         onLogout={handleLogout}
         onReport={currentUser.rol !== 'operador' ? () => setShowReport(true) : undefined}
-        onUbicacionRename={(oldNombre, newNombre) =>
-          setTermos(prev => prev.map(t => t.ubicacion === oldNombre ? { ...t, ubicacion: newNombre } : t))
-        }
+        onUbicacionRename={(oldNombre, newNombre) => {
+          setTermos(prev => prev.map(t => t.ubicacion === oldNombre ? { ...t, ubicacion: newNombre } : t));
+          setUbicaciones(prev => prev.map(u => u === oldNombre ? newNombre : u));
+        }}
         exceptionalDays={exceptionalDays}
         onExceptionalDaysChange={setExceptionalDays}
       />
