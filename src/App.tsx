@@ -13,7 +13,7 @@ import {
   fsLoadRegistro, fsSaveRegistro,
   fsLoadLockedDays, fsSaveLockedDays,
   fsGetMonthsWithData,
-  fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion,
+  fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion, fsRenameUbicacion,
   fsAuthCreateUser, fsAuthLogout, fsSendPasswordReset,
   fsGetUsuarioByLogin,
   fsLoadConfig, fsSaveConfig, AppConfig,
@@ -253,10 +253,12 @@ function ConfigTab({ config, onSave, termos }: { config: AppConfig; onSave: (c: 
 
 // ─── Ubicaciones Tab ──────────────────────────────────────────────────────────
 
-function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
+function UbicacionesTab({ ubicaciones, onRename }: { ubicaciones: string[]; onRename: (oldNombre: string, newNombre: string) => void }) {
   const [lista, setLista] = useState<string[]>(ubicaciones);
   const [nueva, setNueva] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [editVal, setEditVal] = useState('');
 
   const handleAdd = async () => {
     const trimmed = nueva.trim();
@@ -276,6 +278,23 @@ function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
       await fsDeleteUbicacion(u);
       setLista(prev => prev.filter(x => x !== u));
     } catch { alert('Error al eliminar ubicación.'); }
+  };
+
+  const handleEdit = (u: string) => {
+    setEditando(u);
+    setEditVal(u);
+  };
+
+  const handleSaveEdit = async (oldNombre: string) => {
+    const newNombre = editVal.trim();
+    if (!newNombre || newNombre === oldNombre) { setEditando(null); return; }
+    if (lista.includes(newNombre)) { alert('Ya existe una ubicación con ese nombre.'); return; }
+    try {
+      await fsRenameUbicacion(oldNombre, newNombre);
+      setLista(prev => prev.map(x => x === oldNombre ? newNombre : x).sort());
+      onRename(oldNombre, newNombre);
+      setEditando(null);
+    } catch { alert('Error al renombrar ubicación.'); }
   };
 
   return (
@@ -308,9 +327,26 @@ function UbicacionesTab({ ubicaciones }: { ubicaciones: string[] }) {
         ) : (
           <ul className="divide-y divide-gray-100">
             {lista.map(u => (
-              <li key={u} className="flex items-center justify-between py-2.5">
-                <span className="text-sm text-gray-800 flex items-center gap-2">📍 {u}</span>
-                <button onClick={() => handleDelete(u)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
+              <li key={u} className="flex items-center gap-2 py-2.5">
+                {editando === u ? (
+                  <>
+                    <input
+                      autoFocus
+                      className="flex-1 border border-teal-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                      value={editVal}
+                      onChange={e => setEditVal(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(u); if (e.key === 'Escape') setEditando(null); }}
+                    />
+                    <button onClick={() => handleSaveEdit(u)} className="text-teal-700 hover:text-teal-900 text-xs font-semibold">Guardar</button>
+                    <button onClick={() => setEditando(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancelar</button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-gray-800 flex items-center gap-2">📍 {u}</span>
+                    <button onClick={() => handleEdit(u)} className="text-teal-600 hover:text-teal-800 text-xs font-semibold">Editar</button>
+                    <button onClick={() => handleDelete(u)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -334,9 +370,10 @@ interface DashboardProps {
   onDelete: (id: string) => void;
   onLogout: () => void;
   onReport?: () => void;
+  onUbicacionRename?: (oldNombre: string, newNombre: string) => void;
 }
 
-function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout, onReport }: DashboardProps) {
+function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout, onReport, onUbicacionRename }: DashboardProps) {
   const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios' | 'ubicaciones' | 'configuracion'>('equipos');
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -663,7 +700,10 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
 
         {/* ─── Ubicaciones tab (admin only) ─── */}
         {tab === 'ubicaciones' && isAdmin && (
-          <UbicacionesTab ubicaciones={ubicaciones} />
+          <UbicacionesTab
+            ubicaciones={ubicaciones}
+            onRename={(oldNombre, newNombre) => onUbicacionRename?.(oldNombre, newNombre)}
+          />
         )}
 
         {tab === 'configuracion' && isAdmin && (
@@ -1291,6 +1331,9 @@ export default function App() {
         onDelete={handleDelete}
         onLogout={handleLogout}
         onReport={currentUser.rol === 'admin' ? () => setShowReport(true) : undefined}
+        onUbicacionRename={(oldNombre, newNombre) =>
+          setTermos(prev => prev.map(t => t.ubicacion === oldNombre ? { ...t, ubicacion: newNombre } : t))
+        }
       />
       {modalOpen && (
         <TermoModal

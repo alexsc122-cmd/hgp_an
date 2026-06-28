@@ -161,6 +161,19 @@ export async function fsDeleteUbicacion(nombre: string): Promise<void> {
   await deleteDoc(doc(db, 'ubicaciones', id));
 }
 
+export async function fsRenameUbicacion(oldNombre: string, newNombre: string): Promise<void> {
+  const oldId = oldNombre.trim().toLowerCase().replace(/\s+/g, '_');
+  const newId = newNombre.trim().toLowerCase().replace(/\s+/g, '_');
+  await Promise.all([
+    setDoc(doc(db, 'ubicaciones', newId), { nombre: newNombre.trim() }),
+    deleteDoc(doc(db, 'ubicaciones', oldId)),
+  ]);
+  // Update all termos that had the old ubicacion
+  const q = query(collection(db, 'termos'), where('ubicacion', '==', oldNombre.trim()));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map(d => setDoc(d.ref, { ...d.data(), ubicacion: newNombre.trim() })));
+}
+
 // ─── Public verification helpers (Firestore rules must allow public read) ─────
 
 export const fsLoadRegistroPublic = fsLoadRegistro;
