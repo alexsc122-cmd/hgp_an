@@ -29,10 +29,11 @@ export async function fsAuthLogout(): Promise<void> {
   await signOut(auth);
 }
 
-export async function fsAuthCreateUser(email: string, password: string): Promise<void> {
+export async function fsAuthCreateUser(email: string, _password: string): Promise<void> {
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    // Send password setup email so user can set their own password
+    // Use a random temp password — user sets their own via the reset email
+    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+    await createUserWithEmailAndPassword(auth, email, tempPassword);
     await sendPasswordResetEmail(auth, email);
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
