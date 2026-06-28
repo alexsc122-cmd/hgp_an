@@ -483,11 +483,16 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
           let manana = false;
           let tarde = false;
           if (registro) {
-            const entry = (registro as { entries: Array<{ dia: number; tempManana: string; tempTarde: string }> })
+            const entry = (registro as { entries: Array<{ dia: number; tempManana: string; tempTarde: string; humManana?: string; humTarde?: string }> })
               .entries?.find((e: { dia: number }) => e.dia === today);
             if (entry) {
-              manana = !!entry.tempManana?.trim();
-              tarde = !!entry.tempTarde?.trim();
+              if (t.tipo === 'ambiental') {
+                manana = !!entry.tempManana?.trim() && !!entry.humManana?.trim();
+                tarde = !!entry.tempTarde?.trim() && !!entry.humTarde?.trim();
+              } else {
+                manana = !!entry.tempManana?.trim();
+                tarde = !!entry.tempTarde?.trim();
+              }
             }
           }
           return { id: t.id, manana, tarde, locked: isLocked };

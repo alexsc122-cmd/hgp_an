@@ -19,12 +19,16 @@ export default function TermoCard({ termo, onView, onEdit, onDelete, onCalibrati
     }
   };
 
-  const alertMsg = todayAlert && !todayAlert.locked
-    ? (!todayAlert.manana && !todayAlert.tarde ? 'Sin registro hoy'
-      : !todayAlert.manana ? 'Falta mañana'
-      : !todayAlert.tarde ? 'Falta tarde'
-      : null)
-    : null;
+  const alerts: { msg: string; color: string }[] = [];
+  if (todayAlert) {
+    if (!todayAlert.manana && !todayAlert.tarde) {
+      alerts.push({ msg: 'Sin registro hoy', color: 'bg-red-50 border-red-200 text-red-700' });
+    } else {
+      if (!todayAlert.manana) alerts.push({ msg: 'Falta mañana', color: 'bg-amber-50 border-amber-200 text-amber-700' });
+      if (!todayAlert.tarde) alerts.push({ msg: 'Falta tarde', color: 'bg-amber-50 border-amber-200 text-amber-700' });
+    }
+    if (!todayAlert.locked) alerts.push({ msg: 'Falta confirmar día', color: 'bg-blue-50 border-blue-200 text-blue-700' });
+  }
 
   const typeBadge = (
     <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -89,15 +93,18 @@ export default function TermoCard({ termo, onView, onEdit, onDelete, onCalibrati
         {/* Type badge */}
         <div className="hidden sm:block shrink-0">{typeBadge}</div>
 
-        {/* Alert badge */}
-        {alertMsg && (
-          <div className="hidden sm:flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-amber-700 shrink-0">
-            <span>⚠️</span><span>{alertMsg}</span>
+        {/* Alert badges */}
+        {alerts.length > 0 && (
+          <div className="hidden sm:flex flex-col gap-1 shrink-0">
+            {alerts.map(a => (
+              <div key={a.msg} className={`flex items-center gap-1 border rounded-lg px-2.5 py-1 text-xs font-semibold ${a.color}`}>
+                <span>⚠️</span><span>{a.msg}</span>
+              </div>
+            ))}
           </div>
         )}
-        {/* Mobile alert dot */}
-        {alertMsg && (
-          <div className="sm:hidden w-2 h-2 rounded-full bg-amber-400 shrink-0" title={alertMsg} />
+        {alerts.length > 0 && (
+          <div className="sm:hidden w-2 h-2 rounded-full bg-amber-400 shrink-0" title={alerts.map(a => a.msg).join(', ')} />
         )}
 
         {/* Actions */}
@@ -129,13 +136,13 @@ export default function TermoCard({ termo, onView, onEdit, onDelete, onCalibrati
         </p>
       )}
 
-      {alertMsg && (
-        <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs font-semibold text-amber-700">
+      {alerts.map(a => (
+        <div key={a.msg} className={`flex items-center gap-1.5 border rounded-lg px-3 py-2 text-xs font-semibold ${a.color}`}>
           <span className="text-base leading-none">⚠️</span>
-          <span>{alertMsg}</span>
-          <span className="ml-auto text-amber-500 font-normal">Hoy</span>
+          <span>{a.msg}</span>
+          <span className="ml-auto font-normal opacity-70">Hoy</span>
         </div>
-      )}
+      ))}
 
       <div className="flex items-center gap-2 mt-1">
         {actionButtons}
