@@ -18,7 +18,9 @@ import {
   fsGetUsuarioByLogin,
   fsLoadConfig, fsSaveConfig, AppConfig,
   fsExportAllData, fsDeleteAllData, fsImportData, ExportRow,
+  fsLoadExceptionalDays, fsSaveExceptionalDay, fsDeleteExceptionalDay,
 } from './utils/firestore';
+import { isWorkday } from './utils/holidays';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
 import { Anexo10Chart, Anexo11Chart } from './components/TempChart';
@@ -48,7 +50,13 @@ function useDebounce<T>(value: T, delay: number): T {
 
 // ─── Configuración Tab ───────────────────────────────────────────────────────
 
-function ConfigTab({ config, onSave, termos }: { config: AppConfig; onSave: (c: AppConfig) => void; termos: Termohigrometro[] }) {
+function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysChange }: {
+  config: AppConfig;
+  onSave: (c: AppConfig) => void;
+  termos: Termohigrometro[];
+  exceptionalDays: string[];
+  onExceptionalDaysChange: (days: string[]) => void;
+}) {
   const [form, setForm] = useState<AppConfig>(config);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -56,8 +64,35 @@ function ConfigTab({ config, onSave, termos }: { config: AppConfig; onSave: (c: 
   // Export/Import/Reset state
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [resetStep, setResetStep] = useState<0 | 1 | 2>(0); // 0=idle, 1=first confirm, 2=final confirm
+  const [resetStep, setResetStep] = useState<0 | 1 | 2>(0);
   const [resetting, setResetting] = useState(false);
+
+  // Días excepcionales
+  const [newDay, setNewDay] = useState('');
+  const [savingDay, setSavingDay] = useState(false);
+
+  const handleAddExceptionalDay = async () => {
+    if (!newDay || exceptionalDays.includes(newDay)) return;
+    setSavingDay(true);
+    try {
+      await fsSaveExceptionalDay(newDay);
+      onExceptionalDaysChange([...exceptionalDays, newDay].sort());
+      setNewDay('');
+    } catch { alert('Error al guardar el día.'); }
+    setSavingDay(false);
+  };
+
+  const handleDeleteExceptionalDay = async (fecha: string) => {
+    try {
+      await fsDeleteExceptionalDay(fecha);
+      onExceptionalDaysChange(exceptionalDays.filter(d => d !== fecha));
+    } catch { alert('Error al eliminar el día.'); }
+  };
+
+  const fmtFecha = (iso: string) => {
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  };
 
   const field = (label: string, key: keyof AppConfig, placeholder: string) => (
     <div className="flex flex-col gap-1">
@@ -193,6 +228,40 @@ function ConfigTab({ config, onSave, termos }: { config: AppConfig; onSave: (c: 
           </label>
         </div>
         <p className="text-xs text-gray-400 mt-3">El archivo importado debe tener el mismo formato que el exportado. Los datos existentes se fusionarán.</p>
+      </div>
+
+      {/* Días no laborables excepcionales */}
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl mb-6">
+        <h2 className="text-base font-bold text-teal-900 mb-1">📅 Días no laborables adicionales</h2>
+        <p className="text-xs text-gray-500 mb-1">Los sábados, domingos y feriados nacionales del Ecuador ya están excluidos automáticamente.</p>
+        <p className="text-xs text-gray-500 mb-4">Agrega aquí feriados móviles (Carnaval, Semana Santa) o días de cierre excepcionales.</p>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="date"
+            value={newDay}
+            onChange={e => setNewDay(e.target.value)}
+            className="flex-1 border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+          />
+          <button
+            onClick={handleAddExceptionalDay}
+            disabled={savingDay || !newDay}
+            className="bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            Agregar
+          </button>
+        </div>
+        {exceptionalDays.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-3">No hay días excepcionales configurados.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {exceptionalDays.map(d => (
+              <li key={d} className="flex items-center justify-between py-2">
+                <span className="text-sm text-gray-800">📅 {fmtFecha(d)}</span>
+                <button onClick={() => handleDeleteExceptionalDay(d)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Reset */}
@@ -372,15 +441,27 @@ interface DashboardProps {
   onLogout: () => void;
   onReport?: () => void;
   onUbicacionRename?: (oldNombre: string, newNombre: string) => void;
+  exceptionalDays: string[];
+  onExceptionalDaysChange: (days: string[]) => void;
 }
 
-function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout, onReport, onUbicacionRename }: DashboardProps) {
+function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout, onReport, onUbicacionRename, exceptionalDays, onExceptionalDaysChange }: DashboardProps) {
   const [tab, setTab] = useState<'equipos' | 'reportes' | 'usuarios' | 'ubicaciones' | 'configuracion'>('equipos');
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
   const [calibrationTermo, setCalibrationTermo] = useState<Termohigrometro | null>(null);
   const isAdmin = currentUser.rol === 'admin';
+
+  const pendingCount = (() => {
+    const today = new Date();
+    if (!isWorkday(today, exceptionalDays)) return 0;
+    return termos.filter(t => {
+      const s = todayStatus[t.id];
+      if (!s || s.locked) return false;
+      return !s.manana || !s.tarde;
+    }).length;
+  })();
   const [sortBy, setSortBy] = useState<'nombre' | 'ubicacion' | 'tipo'>('nombre');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [todayStatus, setTodayStatus] = useState<Record<string, { manana: boolean; tarde: boolean; locked: boolean }>>({});
@@ -489,9 +570,14 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
           {onReport && (
             <button
               onClick={onReport}
-              className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+              className="relative text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
             >
               📊 Reporte
+              {pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
+                  {pendingCount}
+                </span>
+              )}
             </button>
           )}
           <button
@@ -709,7 +795,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
         )}
 
         {tab === 'configuracion' && isAdmin && (
-          <ConfigTab config={config} onSave={onConfigSave} termos={termos} />
+          <ConfigTab config={config} onSave={onConfigSave} termos={termos} exceptionalDays={exceptionalDays} onExceptionalDaysChange={onExceptionalDaysChange} />
         )}
       </main>
 
@@ -1202,6 +1288,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [termos, setTermos] = useState<Termohigrometro[]>([]);
   const [ubicaciones, setUbicaciones] = useState<string[]>([]);
+  const [exceptionalDays, setExceptionalDays] = useState<string[]>([]);
 
   // Wait for Firebase Auth to initialize, then restore session
   useEffect(() => {
@@ -1240,6 +1327,7 @@ export default function App() {
     });
     fsLoadUbicaciones().then(setUbicaciones).catch(() => {});
     fsLoadConfig().then(setAppConfig).catch(() => {});
+    fsLoadExceptionalDays().then(setExceptionalDays).catch(() => {});
   }, [authReady, currentUser?.id]);
 
   // Visible termos: admin sees all, operador sees only assigned ones
@@ -1343,6 +1431,8 @@ export default function App() {
         onUbicacionRename={(oldNombre, newNombre) =>
           setTermos(prev => prev.map(t => t.ubicacion === oldNombre ? { ...t, ubicacion: newNombre } : t))
         }
+        exceptionalDays={exceptionalDays}
+        onExceptionalDaysChange={setExceptionalDays}
       />
       {modalOpen && (
         <TermoModal

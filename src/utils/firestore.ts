@@ -174,6 +174,23 @@ export async function fsRenameUbicacion(oldNombre: string, newNombre: string): P
   await Promise.all(snap.docs.map(d => setDoc(d.ref, { ...d.data(), ubicacion: newNombre.trim() })));
 }
 
+// ─── Días excepcionales no laborables ────────────────────────────────────────
+
+export async function fsLoadExceptionalDays(): Promise<string[]> {
+  const snap = await getDocs(collection(db, 'diasNoLaborables'));
+  return snap.docs.map(d => d.data().fecha as string).sort();
+}
+
+export async function fsSaveExceptionalDay(fecha: string): Promise<void> {
+  const id = fecha.replace(/-/g, '');
+  await setDoc(doc(db, 'diasNoLaborables', id), { fecha });
+}
+
+export async function fsDeleteExceptionalDay(fecha: string): Promise<void> {
+  const id = fecha.replace(/-/g, '');
+  await deleteDoc(doc(db, 'diasNoLaborables', id));
+}
+
 // ─── Calibraciones ────────────────────────────────────────────────────────────
 
 export async function fsLoadCalibraciones(termoId: string): Promise<Calibracion[]> {
