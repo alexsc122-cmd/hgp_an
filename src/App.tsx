@@ -809,6 +809,12 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
 
                 {/* Row 2: sort + tipo filter + ubicacion filter */}
                 <div className="flex gap-2 flex-wrap items-center">
+                  {(filterSearch || filterTipo || filterUbicacion) && (
+                    <button onClick={() => { setFilterSearch(''); setFilterTipo(null); setFilterUbicacion(null); }}
+                      className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors">
+                      ✕ Limpiar filtros
+                    </button>
+                  )}
                   <span className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Ordenar:</span>
                   {(['nombre', 'ubicacion', 'tipo'] as const).map(opt => (
                     <button key={opt} onClick={() => setSortBy(opt)}
