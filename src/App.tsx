@@ -34,6 +34,8 @@ import PrintHeader from './components/PrintHeader';
 import VerificationPage from './components/VerificationPage';
 import ComplianceReport from './components/ComplianceReport';
 import CalibrationHistory from './components/CalibrationHistory';
+import PublicReportPage from './components/PublicReportPage';
+import { QRCodeSVG } from 'qrcode.react';
 
 function clearUnlockedNombres<T extends { dia: number; nombre: string }>(entries: T[], locked: Set<number>): T[] {
   return entries.map(e => locked.has(e.dia) ? e : { ...e, nombre: '' });
@@ -262,6 +264,46 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
             ))}
           </ul>
         )}
+      </div>
+
+      {/* QR Reporte Público */}
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl border border-teal-100">
+        <h2 className="text-base font-bold text-teal-900 mb-1">📲 QR — Reporte público del mes</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Imprime este código QR y colócalo en la puerta del área. Los inspectores del ARCSA/MSP pueden escanearlo para ver el estado de todos los equipos del mes en curso.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          <div className="bg-white border-2 border-teal-200 rounded-xl p-4 inline-flex flex-col items-center gap-2">
+            <QRCodeSVG
+              value={`${window.location.origin}${window.location.pathname}?publico=1`}
+              size={160}
+              level="M"
+              includeMargin
+            />
+            <p className="text-xs text-gray-500 font-medium">Escanear para ver reporte</p>
+          </div>
+          <div className="flex-1 space-y-3">
+            <div className="bg-teal-50 border border-teal-100 rounded-lg px-4 py-3">
+              <p className="text-xs font-semibold text-teal-800 mb-1">URL del reporte público:</p>
+              <code className="text-xs text-teal-700 break-all">
+                {`${window.location.origin}${window.location.pathname}?publico=1`}
+              </code>
+            </div>
+            <ul className="text-xs text-gray-600 space-y-1.5">
+              <li>✅ No requiere inicio de sesión</li>
+              <li>✅ Muestra datos en tiempo real del mes en curso</li>
+              <li>✅ Incluye todos los equipos y lecturas diarias</li>
+              <li>✅ El inspector puede imprimir desde su celular</li>
+              <li>⚠️ Los datos de temperatura son visibles públicamente</li>
+            </ul>
+            <button
+              onClick={() => window.print()}
+              className="text-xs bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+            >
+              🖨️ Imprimir esta página para obtener el QR
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Reset */}
@@ -1377,11 +1419,14 @@ export default function App() {
     }
   };
 
-  // Check for public verification URL param
+  // Check for public URL params
   const urlParams = new URLSearchParams(window.location.search);
   const verifyParam = urlParams.get('verify');
   if (verifyParam) {
     return <VerificationPage verifyParam={verifyParam} />;
+  }
+  if (urlParams.get('publico') === '1') {
+    return <PublicReportPage />;
   }
 
   if (!authReady) {
