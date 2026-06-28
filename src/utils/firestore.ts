@@ -215,3 +215,130 @@ export async function fsLoadAllLockedDays(
   );
   return new Map(results);
 }
+
+// ─── Export / Import / Reset helpers ─────────────────────────────────────────
+
+export interface ExportRow {
+  termoId: string;
+  termoNombre: string;
+  tipo: string;
+  year: number;
+  month: number;
+  dia: number;
+  tempManana: string;
+  tempTarde: string;
+  humManana: string;
+  humTarde: string;
+  nombre: string;
+  observaciones: string;
+  tsManana: number | '';
+  tsTarde: number | '';
+  locked: boolean;
+  lockedAt: number | '';
+}
+
+export async function fsExportAllData(termos: Termohigrometro[]): Promise<ExportRow[]> {
+  const rows: ExportRow[] = [];
+  // Load all registros across all termos
+  const chunks: Termohigrometro[][] = [];
+  for (let i = 0; i < termos.length; i += 10) chunks.push(termos.slice(i, i + 10));
+
+  for (const chunk of chunks) {
+    const ids = chunk.map(t => t.id);
+    const [regSnap, lockSnap] = await Promise.all([
+      getDocs(query(collection(db, 'registros'), where('termoId', 'in', ids))),
+      getDocs(query(collection(db, 'lockedDays'), where('termoId', 'in', ids))),
+    ]);
+
+    // Build lockedDays lookup: `${termoId}_${year}_${month}` -> LockedDaysData
+    const lockMap = new Map<string, LockedDaysData>();
+    lockSnap.docs.forEach(d => {
+      const data = d.data();
+      const key = `${data.termoId}_${data.year}_${String(data.month).padStart(2, '0')}`;
+      lockMap.set(key, {
+        days: new Set((data.days as number[]) ?? []),
+        lockedAt: (data.lockedAt as Record<number, number>) ?? {},
+      });
+    });
+
+    regSnap.docs.forEach(d => {
+      const data = d.data() as Anexo10Data & Anexo11Data & { termoId: string; year: number; month: number };
+      const termo = chunk.find(t => t.id === data.termoId);
+      if (!termo) return;
+      const lockKey = `${data.termoId}_${data.year}_${String(data.month).padStart(2, '0')}`;
+      const locked = lockMap.get(lockKey) ?? { days: new Set<number>(), lockedAt: {} };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((data.entries ?? []) as any[]).forEach((e: Record<string, unknown>) => {
+        const dia = e.dia as number;
+        rows.push({
+          termoId: data.termoId,
+          termoNombre: termo.nombre,
+          tipo: termo.tipo,
+          year: data.year,
+          month: data.month,
+          dia,
+          tempManana: (e.tempManana as string) ?? '',
+          tempTarde: (e.tempTarde as string) ?? '',
+          humManana: (e.humManana as string) ?? '',
+          humTarde: (e.humTarde as string) ?? '',
+          nombre: (e.nombre as string) ?? '',
+          observaciones: (e.observaciones as string) ?? '',
+          tsManana: (e.tsManana as number) || '',
+          tsTarde: (e.tsTarde as number) || '',
+          locked: locked.days.has(dia),
+          lockedAt: locked.lockedAt[dia] || '',
+        });
+      });
+    });
+  }
+  return rows.sort((a, b) => a.termoId.localeCompare(b.termoId) || a.year - b.year || a.month - b.month || a.dia - b.dia);
+}
+
+export async function fsDeleteAllData(termos: Termohigrometro[]): Promise<void> {
+  const chunks: Termohigrometro[][] = [];
+  for (let i = 0; i < termos.length; i += 10) chunks.push(termos.slice(i, i + 10));
+
+  for (const chunk of chunks) {
+    const ids = chunk.map(t => t.id);
+    const [regSnap, lockSnap] = await Promise.all([
+      getDocs(query(collection(db, 'registros'), where('termoId', 'in', ids))),
+      getDocs(query(collection(db, 'lockedDays'), where('termoId', 'in', ids))),
+    ]);
+    await Promise.all([
+      ...regSnap.docs.map(d => deleteDoc(d.ref)),
+      ...lockSnap.docs.map(d => deleteDoc(d.ref)),
+    ]);
+  }
+}
+
+export async function fsImportData(rows: ExportRow[]): Promise<void> {
+  // Group rows by termoId + year + month
+  const groups = new Map<string, ExportRow[]>();
+  rows.forEach(r => {
+    const key = `${r.termoId}_${r.year}_${String(r.month).padStart(2, '0')}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(r);
+  });
+
+  for (const [, groupRows] of groups) {
+    const { termoId, year, month, tipo } = groupRows[0];
+    const entries = groupRows.map(r => {
+      const base = { dia: r.dia, tempManana: r.tempManana, tempTarde: r.tempTarde, nombre: r.nombre, observaciones: r.observaciones };
+      if (r.tsManana) Object.assign(base, { tsManana: r.tsManana });
+      if (r.tsTarde) Object.assign(base, { tsTarde: r.tsTarde });
+      if (tipo === 'ambiental') return { ...base, humManana: r.humManana, humTarde: r.humTarde };
+      return base;
+    });
+    const id = `${termoId}_${year}_${String(month).padStart(2, '0')}`;
+    await setDoc(doc(db, 'registros', id), { termoId, year, month, entries, header: {}, footer: {} }, { merge: true });
+
+    // Restore lockedDays
+    const lockedDias = groupRows.filter(r => r.locked).map(r => r.dia);
+    const lockedAt: Record<number, number> = {};
+    groupRows.forEach(r => { if (r.locked && r.lockedAt) lockedAt[r.dia] = r.lockedAt as number; });
+    if (lockedDias.length > 0) {
+      const lockId = `locked_${id}`;
+      await setDoc(doc(db, 'lockedDays', lockId), { termoId, year, month, days: lockedDias, lockedAt });
+    }
+  }
+}

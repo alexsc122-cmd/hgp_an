@@ -17,6 +17,7 @@ import {
   fsAuthCreateUser, fsAuthLogout, fsSendPasswordReset,
   fsGetUsuarioByLogin,
   fsLoadConfig, fsSaveConfig, AppConfig,
+  fsExportAllData, fsDeleteAllData, fsImportData, ExportRow,
 } from './utils/firestore';
 import HeaderForm from './components/HeaderForm';
 import { Anexo10Table, Anexo11Table } from './components/RegistroTable';
@@ -46,10 +47,16 @@ function useDebounce<T>(value: T, delay: number): T {
 
 // ─── Configuración Tab ───────────────────────────────────────────────────────
 
-function ConfigTab({ config, onSave }: { config: AppConfig; onSave: (c: AppConfig) => void }) {
+function ConfigTab({ config, onSave, termos }: { config: AppConfig; onSave: (c: AppConfig) => void; termos: Termohigrometro[] }) {
   const [form, setForm] = useState<AppConfig>(config);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Export/Import/Reset state
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [resetStep, setResetStep] = useState<0 | 1 | 2>(0); // 0=idle, 1=first confirm, 2=final confirm
+  const [resetting, setResetting] = useState(false);
 
   const field = (label: string, key: keyof AppConfig, placeholder: string) => (
     <div className="flex flex-col gap-1">
@@ -74,13 +81,80 @@ function ConfigTab({ config, onSave }: { config: AppConfig; onSave: (c: AppConfi
     setSaving(false);
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const rows = await fsExportAllData(termos);
+      if (rows.length === 0) { alert('No hay datos para exportar.'); return; }
+      const headers = Object.keys(rows[0]) as (keyof ExportRow)[];
+      const csvLines = [
+        headers.join(','),
+        ...rows.map(r => headers.map(h => {
+          const v = String(r[h] ?? '');
+          return v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v.replace(/"/g, '""')}"` : v;
+        }).join(',')),
+      ];
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `datos_vivens_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Error al exportar datos.'); }
+    setExporting(false);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { alert('El archivo CSV está vacío o no tiene datos.'); return; }
+      const headers = lines[0].split(',');
+      const rows: ExportRow[] = lines.slice(1).map(line => {
+        const vals = line.match(/("(?:[^"]|"")*"|[^,]*)/g)?.map(v => v.startsWith('"') ? v.slice(1, -1).replace(/""/g, '"') : v) ?? [];
+        const obj: Record<string, unknown> = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] ?? ''; });
+        return {
+          ...obj,
+          year: parseInt(obj.year as string),
+          month: parseInt(obj.month as string),
+          dia: parseInt(obj.dia as string),
+          tsManana: obj.tsManana ? parseInt(obj.tsManana as string) : '',
+          tsTarde: obj.tsTarde ? parseInt(obj.tsTarde as string) : '',
+          locked: obj.locked === 'true',
+          lockedAt: obj.lockedAt ? parseInt(obj.lockedAt as string) : '',
+        } as ExportRow;
+      });
+      await fsImportData(rows);
+      alert(`✅ Importación completada: ${rows.length} registros importados.`);
+    } catch { alert('Error al importar datos. Verifica el formato del archivo.'); }
+    setImporting(false);
+  };
+
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      await fsDeleteAllData(termos);
+      alert('✅ Todos los datos han sido eliminados.');
+    } catch { alert('Error al eliminar datos.'); }
+    setResetting(false);
+    setResetStep(0);
+  };
+
   return (
     <>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-teal-900">Configuración</h1>
         <p className="text-sm text-gray-500 mt-0.5">Valores por defecto para el encabezado de todos los registros</p>
       </div>
-      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl space-y-4">
+
+      {/* Header config */}
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl space-y-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {field('Institución', 'institucion', 'Ej. Clínica Renal El Puyo')}
           {field('Estrategia / Programa / Proyecto', 'estrategia', 'Ej. Control Farmacéutico')}
@@ -98,6 +172,80 @@ function ConfigTab({ config, onSave }: { config: AppConfig; onSave: (c: AppConfi
           {saved && <span className="text-teal-600 text-sm font-medium">✓ Guardado</span>}
         </div>
         <p className="text-xs text-gray-400">Estos valores se pre-llenan automáticamente en todos los formularios de registro.</p>
+      </div>
+
+      {/* Export / Import */}
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl mb-6">
+        <h2 className="text-base font-bold text-teal-900 mb-1">Exportar / Importar datos</h2>
+        <p className="text-xs text-gray-500 mb-4">Descarga todos los registros en formato CSV o carga datos previamente exportados.</p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
+          >
+            {exporting ? '⏳ Exportando...' : '📥 Exportar CSV'}
+          </button>
+          <label className={`cursor-pointer bg-green-700 hover:bg-green-800 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+            {importing ? '⏳ Importando...' : '📤 Importar CSV'}
+            <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
+          </label>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">El archivo importado debe tener el mismo formato que el exportado. Los datos existentes se fusionarán.</p>
+      </div>
+
+      {/* Reset */}
+      <div className="bg-white rounded-xl shadow-sm p-6 max-w-2xl border border-red-100">
+        <h2 className="text-base font-bold text-red-800 mb-1">⚠️ Resetear todos los datos</h2>
+        <p className="text-xs text-gray-500 mb-4">Elimina permanentemente todos los registros de temperatura y humedad de todos los equipos. Esta acción no se puede deshacer.</p>
+        {resetStep === 0 && (
+          <button
+            onClick={() => setResetStep(1)}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
+          >
+            Resetear todos los datos
+          </button>
+        )}
+        {resetStep === 1 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-semibold text-red-800">¿Estás seguro? Esto eliminará TODOS los registros de todos los equipos.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setResetStep(2)}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm"
+              >
+                Sí, continuar
+              </button>
+              <button
+                onClick={() => setResetStep(0)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-1.5 rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+        {resetStep === 2 && (
+          <div className="bg-red-50 border border-red-300 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-bold text-red-900">⚠️ Confirmación final: esta acción es IRREVERSIBLE. ¿Deseas eliminar todos los datos?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleReset}
+                disabled={resetting}
+                className="bg-red-700 hover:bg-red-800 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-lg text-sm"
+              >
+                {resetting ? 'Eliminando...' : 'Sí, eliminar todo'}
+              </button>
+              <button
+                onClick={() => setResetStep(0)}
+                disabled={resetting}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -519,7 +667,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
         )}
 
         {tab === 'configuracion' && isAdmin && (
-          <ConfigTab config={config} onSave={onConfigSave} />
+          <ConfigTab config={config} onSave={onConfigSave} termos={termos} />
         )}
       </main>
 
