@@ -1,6 +1,6 @@
 import {
   doc, getDoc, setDoc, deleteDoc,
-  collection, getDocs, query, where,
+  collection, getDocs, query, where, orderBy,
 } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword,
@@ -13,7 +13,7 @@ import {
   reauthenticateWithCredential,
 } from 'firebase/auth';
 import { db, auth } from '../firebase';
-import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data } from '../types';
+import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data, Calibracion } from '../types';
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
@@ -172,6 +172,22 @@ export async function fsRenameUbicacion(oldNombre: string, newNombre: string): P
   const q = query(collection(db, 'termos'), where('ubicacion', '==', oldNombre.trim()));
   const snap = await getDocs(q);
   await Promise.all(snap.docs.map(d => setDoc(d.ref, { ...d.data(), ubicacion: newNombre.trim() })));
+}
+
+// ─── Calibraciones ────────────────────────────────────────────────────────────
+
+export async function fsLoadCalibraciones(termoId: string): Promise<Calibracion[]> {
+  const q = query(collection(db, 'calibraciones'), where('termoId', '==', termoId), orderBy('fecha', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as Calibracion);
+}
+
+export async function fsSavecalibracion(c: Calibracion): Promise<void> {
+  await setDoc(doc(db, 'calibraciones', c.id), c);
+}
+
+export async function fsDeleteCalibracion(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'calibraciones', id));
 }
 
 // ─── Public verification helpers (Firestore rules must allow public read) ─────

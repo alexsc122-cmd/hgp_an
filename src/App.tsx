@@ -31,6 +31,7 @@ import ReportesTab from './components/ReportesTab';
 import PrintHeader from './components/PrintHeader';
 import VerificationPage from './components/VerificationPage';
 import ComplianceReport from './components/ComplianceReport';
+import CalibrationHistory from './components/CalibrationHistory';
 
 function clearUnlockedNombres<T extends { dia: number; nombre: string }>(entries: T[], locked: Set<number>): T[] {
   return entries.map(e => locked.has(e.dia) ? e : { ...e, nombre: '' });
@@ -378,6 +379,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
+  const [calibrationTermo, setCalibrationTermo] = useState<Termohigrometro | null>(null);
   const isAdmin = currentUser.rol === 'admin';
   const [sortBy, setSortBy] = useState<'nombre' | 'ubicacion' | 'tipo'>('nombre');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -637,6 +639,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                       onView={onView}
                       onEdit={isAdmin ? onEdit : undefined}
                       onDelete={isAdmin ? onDelete : undefined}
+                      onCalibration={setCalibrationTermo}
                       todayAlert={todayStatus[t.id]}
                       listMode={viewMode === 'list'}
                     />
@@ -712,6 +715,13 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
 
       {userModalOpen && (
         <UserModal initial={editUser} termos={termos} onSave={handleSaveUser} onCancel={() => { setUserModalOpen(false); setEditUser(null); }} />
+      )}
+      {calibrationTermo && (
+        <CalibrationHistory
+          termo={calibrationTermo}
+          isAdmin={isAdmin}
+          onClose={() => setCalibrationTermo(null)}
+        />
       )}
     </div>
   );

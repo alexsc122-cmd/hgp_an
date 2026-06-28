@@ -69,6 +69,19 @@ export const MESES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
+// ─── Calibración ─────────────────────────────────────────────────────────────
+
+export interface Calibracion {
+  id: string;
+  termoId: string;
+  fecha: string;          // ISO date YYYY-MM-DD
+  numeroCertificado: string;
+  laboratorio: string;
+  resultado: string;      // 'aprobado' | 'con observaciones' | libre
+  observaciones: string;
+  creadoEn: string;
+}
+
 // ─── Termohigrómetro model ────────────────────────────────────────────────────
 
 export interface Termohigrometro {
