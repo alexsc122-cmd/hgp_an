@@ -35,8 +35,17 @@ function Stats({ stats }: { stats: Stat[] }) {
   );
 }
 
+interface RangePoint {
+  label: string;
+  promManana: number | undefined;
+  promTarde: number | undefined;
+  promHumManana?: number | undefined;
+  promHumTarde?: number | undefined;
+}
+
 export default function ReportesTab({ termos }: Props) {
   const now = new Date();
+  const [mode, setMode] = useState<'mes' | 'rango'>('mes');
   const [selectedTermoId, setSelectedTermoId] = useState<string>(termos[0]?.id ?? '');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -45,13 +54,23 @@ export default function ReportesTab({ termos }: Props) {
   const [data11, setData11] = useState<Anexo11Data | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Rango state
+  const [rangeFromYear, setRangeFromYear] = useState(now.getFullYear());
+  const [rangeFromMonth, setRangeFromMonth] = useState(1);
+  const [rangeToYear, setRangeToYear] = useState(now.getFullYear());
+  const [rangeToMonth, setRangeToMonth] = useState(now.getMonth() + 1);
+  const [rangeData, setRangeData] = useState<RangePoint[]>([]);
+  const [rangeLoading, setRangeLoading] = useState(false);
+
   const termo = termos.find(t => t.id === selectedTermoId);
   const isAmbiental = termo?.tipo === 'ambiental';
 
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Reporte_${termo?.nombre ?? ''}_${MESES[selectedMonth - 1]}_${selectedYear}`,
+    documentTitle: mode === 'mes'
+      ? `Reporte_${termo?.nombre ?? ''}_${MESES[selectedMonth - 1]}_${selectedYear}`
+      : `Reporte_${termo?.nombre ?? ''}_${MESES[rangeFromMonth - 1]}${rangeFromYear}_${MESES[rangeToMonth - 1]}${rangeToYear}`,
   });
 
   // Load months with data when termo changes
@@ -62,9 +81,9 @@ export default function ReportesTab({ termos }: Props) {
       .catch(() => alert('Error al cargar meses con datos.'));
   }, [selectedTermoId]);
 
-  // Load registro data when termo, year, or month changes
+  // Load registro data when termo, year, or month changes (mes mode)
   useEffect(() => {
-    if (!selectedTermoId) return;
+    if (!selectedTermoId || mode !== 'mes') return;
     let cancelled = false;
     setLoading(true);
     setData10(null);
@@ -72,26 +91,72 @@ export default function ReportesTab({ termos }: Props) {
     fsLoadRegistro(selectedTermoId, selectedYear, selectedMonth)
       .then(registro => {
         if (cancelled) return;
-        if (isAmbiental) {
-          setData10((registro as Anexo10Data | null));
-          setData11(null);
-        } else {
-          setData11((registro as Anexo11Data | null));
-          setData10(null);
-        }
+        if (isAmbiental) { setData10(registro as Anexo10Data | null); setData11(null); }
+        else { setData11(registro as Anexo11Data | null); setData10(null); }
       })
-      .catch(() => {
-        if (!cancelled) alert('Error al cargar datos del reporte.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .catch(() => { if (!cancelled) alert('Error al cargar datos del reporte.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [selectedTermoId, selectedYear, selectedMonth, isAmbiental]);
+  }, [selectedTermoId, selectedYear, selectedMonth, isAmbiental, mode]);
+
+  // Load range data
+  useEffect(() => {
+    if (!selectedTermoId || mode !== 'rango') return;
+    let cancelled = false;
+    setRangeLoading(true);
+    setRangeData([]);
+
+    // Build list of year/month pairs in range
+    const months: { year: number; month: number }[] = [];
+    let y = rangeFromYear, m = rangeFromMonth;
+    while (y < rangeToYear || (y === rangeToYear && m <= rangeToMonth)) {
+      months.push({ year: y, month: m });
+      m++;
+      if (m > 12) { m = 1; y++; }
+      if (months.length > 36) break; // safety cap
+    }
+
+    Promise.all(months.map(({ year, month }) =>
+      fsLoadRegistro(selectedTermoId, year, month).then(reg => ({ year, month, reg }))
+    )).then(results => {
+      if (cancelled) return;
+      const points: RangePoint[] = results.map(({ year, month, reg }) => {
+        const label = `${MESES[month - 1].slice(0, 3)} ${year}`;
+        if (!reg) return { label, promManana: undefined, promTarde: undefined, promHumManana: undefined, promHumTarde: undefined };
+
+        const entries = isAmbiental
+          ? (reg as Anexo10Data).entries ?? []
+          : (reg as Anexo11Data).entries ?? [];
+
+        const tempMananas = entries.map(e => e.tempManana ? parseFloat(e.tempManana) : null).filter((v): v is number => v !== null);
+        const tempTardes = entries.map(e => e.tempTarde ? parseFloat(e.tempTarde) : null).filter((v): v is number => v !== null);
+        const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : undefined;
+
+        const point: RangePoint = {
+          label,
+          promManana: avg(tempMananas),
+          promTarde: avg(tempTardes),
+        };
+
+        if (isAmbiental) {
+          const humMananas = (reg as Anexo10Data).entries.map(e => e.humManana ? parseFloat(e.humManana) : null).filter((v): v is number => v !== null);
+          const humTardes = (reg as Anexo10Data).entries.map(e => e.humTarde ? parseFloat(e.humTarde) : null).filter((v): v is number => v !== null);
+          point.promHumManana = avg(humMananas);
+          point.promHumTarde = avg(humTardes);
+        }
+
+        return point;
+      });
+      setRangeData(points);
+    }).catch(() => { if (!cancelled) alert('Error al cargar datos del rango.'); })
+      .finally(() => { if (!cancelled) setRangeLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [selectedTermoId, rangeFromYear, rangeFromMonth, rangeToYear, rangeToMonth, isAmbiental, mode]);
 
   // Available years
   const years = useMemo(() => {
-    const ys = Array.from(new Set([now.getFullYear(), ...monthsWithData.map(m => m.year)]));
+    const ys = Array.from(new Set([now.getFullYear(), now.getFullYear() - 1, now.getFullYear() + 1, ...monthsWithData.map(m => m.year)]));
     return ys.sort((a, b) => b - a);
   }, [monthsWithData]);
 
@@ -174,10 +239,24 @@ export default function ReportesTab({ termos }: Props) {
     );
   }
 
+  const rangeHasData = rangeData.some(p => p.promManana !== undefined || p.promTarde !== undefined);
+
   return (
     <div className="space-y-5">
       {/* ─── Selectors ─── */}
       <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-4">
+          {(['mes', 'rango'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${mode === m ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+            >
+              {m === 'mes' ? '📅 Por mes' : '📆 Rango de meses'}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap gap-4 items-end">
           {/* Equipo */}
           <div className="flex-1 min-w-48">
@@ -195,36 +274,56 @@ export default function ReportesTab({ termos }: Props) {
             </select>
           </div>
 
-          {/* Año */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Año</label>
-            <select
-              value={selectedYear}
-              onChange={e => setSelectedYear(parseInt(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
+          {/* Mes mode selectors */}
+          {mode === 'mes' && <>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Año</label>
+              <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Mes</label>
+              <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                {MESES.map((m, i) => {
+                  const hasD = monthsWithData.some(d => d.year === selectedYear && d.month === i + 1);
+                  return <option key={i + 1} value={i + 1}>{m}{hasD ? ' ●' : ''}</option>;
+                })}
+              </select>
+            </div>
+          </>}
 
-          {/* Mes */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Mes</label>
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(parseInt(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              {MESES.map((m, i) => {
-                const hasD = monthsWithData.some(d => d.year === selectedYear && d.month === i + 1);
-                return (
-                  <option key={i + 1} value={i + 1}>
-                    {m}{hasD ? ' ●' : ''}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+          {/* Rango mode selectors */}
+          {mode === 'rango' && <>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Desde</label>
+              <div className="flex gap-1">
+                <select value={rangeFromMonth} onChange={e => setRangeFromMonth(parseInt(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m.slice(0, 3)}</option>)}
+                </select>
+                <select value={rangeFromYear} onChange={e => setRangeFromYear(parseInt(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Hasta</label>
+              <div className="flex gap-1">
+                <select value={rangeToMonth} onChange={e => setRangeToMonth(parseInt(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m.slice(0, 3)}</option>)}
+                </select>
+                <select value={rangeToYear} onChange={e => setRangeToYear(parseInt(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+            </div>
+          </>}
 
           {/* Info badge */}
           {termo && (
@@ -235,7 +334,131 @@ export default function ReportesTab({ termos }: Props) {
         </div>
       </div>
 
-      {loading ? (
+      {/* ─── Rango mode ─── */}
+      {mode === 'rango' && (
+        rangeLoading ? (
+          <div className="flex items-center justify-center py-20"><p className="text-blue-600">Cargando rango...</p></div>
+        ) : !rangeHasData ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 bg-white rounded-xl border border-blue-100">
+            <div className="text-4xl mb-3">📭</div>
+            <p className="font-semibold text-gray-600">Sin datos para el rango seleccionado</p>
+          </div>
+        ) : (
+          <div ref={printRef} className="space-y-5">
+            {/* Print header rango */}
+            <div className="print-only" style={{ display: 'none' }}>
+              <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '18px 28px 14px' }}>
+                <div style={{ color: 'white', fontSize: '10px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.85, marginBottom: '4px' }}>
+                  Clínica Renal El Puyo — VIVENS
+                </div>
+                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, lineHeight: 1.2 }}>
+                  Análisis de Comportamiento — {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Temperatura de Refrigeración'}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', marginTop: '6px' }}>
+                  {MESES[rangeFromMonth - 1]} {rangeFromYear} — {MESES[rangeToMonth - 1]} {rangeToYear} · {termo?.nombre}{termo?.numero ? ` · N° ${termo.numero}` : ''}
+                </div>
+              </div>
+              <div style={{ background: '#f0fdfa', borderBottom: '1.5px solid #99f6e4', padding: '8px 28px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#134e4a' }}>
+                <span><strong>Equipo:</strong> {termo?.nombre}{termo?.numero ? ` (N° ${termo.numero})` : ''}</span>
+                <span><strong>Tipo:</strong> {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Refrigeración'}</span>
+                <span><strong>Rango:</strong> {MESES[rangeFromMonth - 1]} {rangeFromYear} — {MESES[rangeToMonth - 1]} {rangeToYear}</span>
+                {termo?.ubicacion && <span><strong>Ubicación:</strong> {termo.ubicacion}</span>}
+              </div>
+            </div>
+
+            {/* Botón imprimir */}
+            <div className="flex justify-end no-print">
+              <button onClick={() => handlePrint()}
+                className="text-xs bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                🖨️ Imprimir reporte
+              </button>
+            </div>
+
+            {/* Gráfico temperatura rango */}
+            <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+              <h3 className="text-sm font-bold text-blue-900 mb-4">
+                Promedio de Temperatura por Mes — {MESES[rangeFromMonth - 1]} {rangeFromYear} a {MESES[rangeToMonth - 1]} {rangeToYear}
+              </h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={rangeData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                  <YAxis unit="°C" tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
+                  <Tooltip formatter={(v: unknown) => `${(v as number).toFixed(1)}°C`} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {isAmbiental
+                    ? <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="5 3" label={{ value: 'Límite 30°C', fill: '#ef4444', fontSize: 10 }} />
+                    : <>
+                        <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" label={{ value: 'Máx 8°C', fill: '#ef4444', fontSize: 10 }} />
+                        <ReferenceLine y={2} stroke="#f97316" strokeDasharray="5 3" label={{ value: 'Mín 2°C', fill: '#f97316', fontSize: 10 }} />
+                      </>
+                  }
+                  <Line type="monotone" dataKey="promManana" name="Prom. Mañana" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
+                  <Line type="monotone" dataKey="promTarde" name="Prom. Tarde" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Gráfico humedad rango */}
+            {isAmbiental && rangeData.some(p => p.promHumManana !== undefined) && (
+              <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+                <h3 className="text-sm font-bold text-blue-900 mb-4">
+                  Promedio de Humedad Relativa por Mes — {MESES[rangeFromMonth - 1]} {rangeFromYear} a {MESES[rangeToMonth - 1]} {rangeToYear}
+                </h3>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={rangeData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                    <YAxis unit="%" tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
+                    <Tooltip formatter={(v: unknown) => `${(v as number).toFixed(1)}%`} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="5 3" label={{ value: 'Límite 70%', fill: '#ef4444', fontSize: 10 }} />
+                    <Line type="monotone" dataKey="promHumManana" name="Prom. Mañana" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
+                    <Line type="monotone" dataKey="promHumTarde" name="Prom. Tarde" stroke="#ec4899" strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Tabla resumen por mes */}
+            <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-blue-50">
+                <h3 className="text-sm font-bold text-blue-900">Resumen por mes</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-blue-50 text-blue-900 font-semibold">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Mes</th>
+                      <th className="px-3 py-2 text-center">T° Prom. Mañana</th>
+                      <th className="px-3 py-2 text-center">T° Prom. Tarde</th>
+                      {isAmbiental && <>
+                        <th className="px-3 py-2 text-center">HR Prom. Mañana</th>
+                        <th className="px-3 py-2 text-center">HR Prom. Tarde</th>
+                      </>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {rangeData.map(p => (
+                      <tr key={p.label} className="hover:bg-gray-50">
+                        <td className="px-3 py-1.5 font-semibold text-gray-700">{p.label}</td>
+                        <td className="px-3 py-1.5 text-center">{p.promManana !== undefined ? `${p.promManana.toFixed(1)}°C` : '—'}</td>
+                        <td className="px-3 py-1.5 text-center">{p.promTarde !== undefined ? `${p.promTarde.toFixed(1)}°C` : '—'}</td>
+                        {isAmbiental && <>
+                          <td className="px-3 py-1.5 text-center">{p.promHumManana !== undefined ? `${p.promHumManana.toFixed(1)}%` : '—'}</td>
+                          <td className="px-3 py-1.5 text-center">{p.promHumTarde !== undefined ? `${p.promHumTarde.toFixed(1)}%` : '—'}</td>
+                        </>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {mode === 'mes' && (loading ? (
         <div className="flex items-center justify-center py-20">
           <p className="text-blue-600">Cargando...</p>
         </div>
@@ -458,7 +681,7 @@ export default function ReportesTab({ termos }: Props) {
             </div>
           </div>
         </div>
-      )}
+      ))}
     </div>
   );
 }
