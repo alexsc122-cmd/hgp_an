@@ -1140,7 +1140,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             estrategia: config.estrategia || savedHeader?.estrategia || '',
             establecimiento: config.establecimiento || savedHeader?.establecimiento || '',
             direccion: config.direccion || savedHeader?.direccion || '',
-            noEquipo: savedHeader?.noEquipo || termo.numero,
+            noEquipo: termo.numero,
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
@@ -1160,7 +1160,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             estrategia: config.estrategia || savedHeader?.estrategia || '',
             establecimiento: config.establecimiento || savedHeader?.establecimiento || '',
             direccion: config.direccion || savedHeader?.direccion || '',
-            noEquipo: savedHeader?.noEquipo || termo.numero,
+            noEquipo: termo.numero,
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
@@ -1264,7 +1264,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const base = registro as Anexo10Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
           const entries = clearUnlockedNombres(rawEntries, locked.days);
-          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
+          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: termo.numero };
           const footer10 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
           if (!footer10.revisadoPor) footer10.revisadoPor = currentUser.nombre;
           if (!footer10.cargo) footer10.cargo = currentUser.cargo || '';
@@ -1284,7 +1284,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const base = registro as Anexo11Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
           const entries = clearUnlockedNombres(rawEntries, locked.days);
-          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
+          const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: termo.numero };
           const footer11 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
           if (!footer11.revisadoPor) footer11.revisadoPor = currentUser.nombre;
           if (!footer11.cargo) footer11.cargo = currentUser.cargo || '';
