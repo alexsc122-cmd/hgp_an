@@ -5,8 +5,8 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
-import { Termohigrometro, Anexo10Data, Anexo11Data, MESES } from '../types';
-import { fsLoadRegistro, fsGetMonthsWithData } from '../utils/firestore';
+import { Termohigrometro, Anexo10Data, Anexo11Data, Calibracion, MESES } from '../types';
+import { fsLoadRegistro, fsGetMonthsWithData, fsLoadCalibraciones } from '../utils/firestore';
 import { calcProm } from '../utils/calculations';
 
 interface Props {
@@ -53,6 +53,7 @@ export default function ReportesTab({ termos }: Props) {
   const [data10, setData10] = useState<Anexo10Data | null>(null);
   const [data11, setData11] = useState<Anexo11Data | null>(null);
   const [loading, setLoading] = useState(false);
+  const [calibraciones, setCalibraciones] = useState<Calibracion[]>([]);
 
   // Rango state
   const [rangeFromYear, setRangeFromYear] = useState(now.getFullYear());
@@ -73,12 +74,15 @@ export default function ReportesTab({ termos }: Props) {
       : `Reporte_${termo?.nombre ?? ''}_${MESES[rangeFromMonth - 1]}${rangeFromYear}_${MESES[rangeToMonth - 1]}${rangeToYear}`,
   });
 
-  // Load months with data when termo changes
+  // Load months with data and calibraciones when termo changes
   useEffect(() => {
     if (!selectedTermoId) return;
     fsGetMonthsWithData(selectedTermoId)
       .then(setMonthsWithData)
       .catch(() => alert('Error al cargar meses con datos.'));
+    fsLoadCalibraciones(selectedTermoId)
+      .then(setCalibraciones)
+      .catch(() => {});
   }, [selectedTermoId]);
 
   // Load registro data when termo, year, or month changes (mes mode)
@@ -503,12 +507,43 @@ export default function ReportesTab({ termos }: Props) {
                 </div>
 
                 {/* Línea divisoria con info del equipo */}
-                <div style={{ background: '#f0fdfa', borderBottom: '1.5px solid #99f6e4', padding: '8px 28px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#134e4a' }}>
-                  <span><strong>Equipo:</strong> {termo?.nombre}{termo?.numero ? ` (N° ${termo.numero})` : ''}</span>
+                <div style={{ background: '#f0fdfa', borderBottom: '1.5px solid #99f6e4', padding: '10px 28px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '11px', color: '#134e4a' }}>
+                  <span><strong>Equipo:</strong> {termo?.nombre}{termo?.numero ? ` — N° ${termo.numero}` : ''}</span>
                   <span><strong>Tipo:</strong> {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Refrigeración'}</span>
                   <span><strong>Período:</strong> {MESES[selectedMonth - 1]} {selectedYear}</span>
                   {termo?.ubicacion && <span><strong>Ubicación:</strong> {termo.ubicacion}</span>}
                 </div>
+
+                {/* Calibraciones */}
+                {calibraciones.length > 0 && (
+                  <div style={{ margin: '14px 28px 0', borderTop: '1px solid #99f6e4', paddingTop: '10px' }}>
+                    <div style={{ fontSize: '8px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                      Historial de Calibración
+                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px' }}>
+                      <thead>
+                        <tr style={{ background: '#f0fdfa' }}>
+                          {['Fecha', 'N° Certificado', 'Laboratorio', 'Resultado', 'Observaciones'].map(h => (
+                            <th key={h} style={{ border: '1px solid #99f6e4', padding: '3px 6px', textAlign: 'left', color: '#0f766e', fontWeight: 700 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {calibraciones.map(c => (
+                          <tr key={c.id}>
+                            <td style={{ border: '1px solid #99f6e4', padding: '3px 6px' }}>{c.fecha}</td>
+                            <td style={{ border: '1px solid #99f6e4', padding: '3px 6px' }}>{c.numeroCertificado}</td>
+                            <td style={{ border: '1px solid #99f6e4', padding: '3px 6px' }}>{c.laboratorio}</td>
+                            <td style={{ border: '1px solid #99f6e4', padding: '3px 6px', fontWeight: 700, color: c.resultado === 'aprobado' ? '#166534' : '#92400e' }}>
+                              {c.resultado === 'aprobado' ? '✓ Aprobado' : c.resultado === 'con observaciones' ? '⚠ Con obs.' : c.resultado}
+                            </td>
+                            <td style={{ border: '1px solid #99f6e4', padding: '3px 6px', color: '#6b7280' }}>{c.observaciones || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {/* Pie con validador y QR */}
                 {(validador || cargo || fecha) && (
