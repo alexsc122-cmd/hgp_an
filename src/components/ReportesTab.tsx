@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useReactToPrint } from 'react-to-print';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine, ResponsiveContainer,
@@ -246,6 +247,73 @@ export default function ReportesTab({ termos }: Props) {
         </div>
       ) : (
         <div ref={printRef} className="space-y-5">
+
+          {/* ─── Encabezado profesional (solo en impresión) ─── */}
+          {(() => {
+            const footer = isAmbiental ? data10?.footer : data11?.footer;
+            const validador = footer?.revisadoPor?.trim() || '';
+            const cargo = footer?.cargo?.trim() || '';
+            const fecha = footer?.fecha?.trim() || '';
+            const qrContent = [
+              `Equipo: ${termo?.nombre ?? ''}`,
+              termo?.numero ? `N° Serie: ${termo.numero}` : '',
+              `Período: ${MESES[selectedMonth - 1]} ${selectedYear}`,
+              `Tipo: ${isAmbiental ? 'Temperatura Ambiental' : 'Refrigeración'}`,
+              validador ? `Validado por: ${validador}` : '',
+              cargo ? `Cargo: ${cargo}` : '',
+              fecha ? `Fecha validación: ${fecha}` : '',
+            ].filter(Boolean).join('\n');
+
+            return (
+              <div className="print-only" style={{ display: 'none' }}>
+                {/* Franja teal superior */}
+                <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '18px 28px 14px', marginBottom: 0 }}>
+                  <div style={{ color: 'white', fontSize: '10px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.85, marginBottom: '4px' }}>
+                    Clínica Renal El Puyo — VIVENS
+                  </div>
+                  <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '0.5px', lineHeight: 1.2 }}>
+                    Reporte {isAmbiental ? 'de Temperatura y Humedad Ambiental' : 'de Temperatura de Refrigeración'}
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', marginTop: '6px' }}>
+                    {MESES[selectedMonth - 1]} {selectedYear} · {termo?.nombre}{termo?.numero ? ` · N° ${termo.numero}` : ''}{termo?.ubicacion ? ` · ${termo.ubicacion}` : ''}
+                  </div>
+                </div>
+
+                {/* Línea divisoria con info del equipo */}
+                <div style={{ background: '#f0fdfa', borderBottom: '1.5px solid #99f6e4', padding: '8px 28px', display: 'flex', justifyContent: 'space-between', fontSize: '8px', color: '#134e4a' }}>
+                  <span><strong>Equipo:</strong> {termo?.nombre}{termo?.numero ? ` (N° ${termo.numero})` : ''}</span>
+                  <span><strong>Tipo:</strong> {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Refrigeración'}</span>
+                  <span><strong>Período:</strong> {MESES[selectedMonth - 1]} {selectedYear}</span>
+                  {termo?.ubicacion && <span><strong>Ubicación:</strong> {termo.ubicacion}</span>}
+                </div>
+
+                {/* Pie con validador y QR */}
+                {(validador || cargo || fecha) && (
+                  <div style={{ marginTop: '20px', borderTop: '1.5px solid #99f6e4', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '12px 28px 0' }}>
+                    <div>
+                      <div style={{ fontSize: '7px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
+                        Validado por
+                      </div>
+                      {validador && (
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#134e4a', borderBottom: '1px solid #134e4a', paddingBottom: '2px', minWidth: '160px' }}>
+                          {validador}
+                        </div>
+                      )}
+                      {cargo && <div style={{ fontSize: '8px', color: '#374151', marginTop: '3px' }}>{cargo}</div>}
+                      {fecha && <div style={{ fontSize: '8px', color: '#6b7280', marginTop: '2px' }}>Fecha: {fecha}</div>}
+                    </div>
+                    {qrContent && (
+                      <div style={{ textAlign: 'center' }}>
+                        <QRCodeSVG value={qrContent} size={72} level="M" />
+                        <div style={{ fontSize: '6px', color: '#6b7280', marginTop: '3px' }}>Información del reporte</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ─── Temperatura stats ─── */}
           {tempStats.length > 0 && (
             <div>
