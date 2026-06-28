@@ -13,6 +13,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
   const [usuario, setUsuario] = useState(initial?.usuario ?? '');
   const [email, setEmail] = useState(initial?.email ?? '');
   const [rol, setRol] = useState<UserRole>(initial?.rol ?? 'operador');
+  const [cargo, setCargo] = useState(initial?.cargo ?? '');
   const validIds = new Set(termos.map(t => t.id));
   const [termosAsignados, setTermosAsignados] = useState<string[]>(
     (initial?.termosAsignados ?? []).filter(id => validIds.has(id))
@@ -61,6 +62,7 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
       usuario: usuario.trim(),
       email: email.trim().toLowerCase(),
       rol,
+      cargo: cargo.trim(),
       termosAsignados: rol === 'admin' ? [] : termosAsignados,
       creadoEn: initial?.creadoEn ?? new Date().toISOString(),
     };
@@ -112,6 +114,16 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
               onChange={e => setEmail(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Ej: jperez@clinica.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Cargo</label>
+            <input
+              value={cargo}
+              onChange={e => setCargo(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              placeholder="Ej: Químico Farmacéutico, Regente"
             />
           </div>
 

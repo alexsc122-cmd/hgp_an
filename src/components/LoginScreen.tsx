@@ -33,7 +33,7 @@ export default function LoginScreen({ onLogin }: Props) {
           const admin: Usuario = {
             id: '1', nombre: 'Administrador', usuario: 'admin',
             email: adminEmail,
-            rol: 'admin', termosAsignados: [],
+            rol: 'admin', cargo: '', termosAsignados: [],
             creadoEn: new Date().toISOString(),
           };
           await fsSaveUsuario(admin);

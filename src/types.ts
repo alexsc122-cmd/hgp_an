@@ -10,6 +10,7 @@ export interface Usuario {
   usuario: string;   // login username
   email: string;     // real email for Firebase Auth
   rol: UserRole;
+  cargo: string;
   termosAsignados: string[];
   creadoEn: string;
 }

@@ -133,11 +133,15 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
                   <select
                     className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
                     value={revisadoPor}
-                    onChange={e => setRevisadoPor(e.target.value)}
+                    onChange={e => {
+                      setRevisadoPor(e.target.value);
+                      const selected = usuarios.find(u => u.nombre === e.target.value);
+                      if (selected) setCargo(selected.cargo ?? '');
+                    }}
                   >
                     <option value="">— Selecciona un usuario —</option>
                     {usuarios.filter(u => u.rol !== 'operador').map(u => (
-                      <option key={u.id} value={u.nombre}>
+                      <option key={u.id} value={u.nombre} data-cargo={u.cargo ?? ''}>
                         {u.nombre} ({u.rol === 'admin' ? 'Admin' : 'Validador'})
                       </option>
                     ))}
