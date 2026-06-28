@@ -215,7 +215,6 @@ export function initAdminIfNeeded(): void {
       nombre: 'Administrador',
       usuario: 'admin',
       email: 'admin@vivens.local',
-      password: 'admin123',
       rol: 'admin',
       termosAsignados: [],
       creadoEn: new Date().toISOString(),

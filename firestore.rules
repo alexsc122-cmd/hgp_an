@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the caller is an authenticated admin
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    // Helper: check if caller is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // ── Usuarios ──────────────────────────────────────────────────────────────
+    // Only admins can read/write user records
+    match /usuarios/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Configuración ─────────────────────────────────────────────────────────
+    // Any authenticated user can read config; only admins can write
+    match /config/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Termohigrómetros ──────────────────────────────────────────────────────
+    // Any authenticated user can read; only admins can create/update/delete
+    match /termos/{termoId} {
+      allow read: if isAuthenticated() || true; // public read for QR verification
+      allow write: if isAdmin();
+    }
+
+    // ── Ubicaciones ───────────────────────────────────────────────────────────
+    match /ubicaciones/{ubicacionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Registros mensuales ───────────────────────────────────────────────────
+    // Public read (for QR verification page); write requires authentication
+    match /registros/{registroId} {
+      allow read: if true; // public for QR verification
+      allow write: if isAuthenticated();
+    }
+
+    // ── Días bloqueados ───────────────────────────────────────────────────────
+    // Authenticated users can read; only admins can write (lock/unlock days)
+    match /lockedDays/{docId} {
+      allow read: if true; // public for QR verification
+      allow write: if isAdmin();
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

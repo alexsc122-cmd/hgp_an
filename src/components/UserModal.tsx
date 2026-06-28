@@ -60,7 +60,6 @@ export default function UserModal({ initial, termos, onSave, onCancel }: Props) 
       nombre: nombre.trim(),
       usuario: usuario.trim(),
       email: email.trim().toLowerCase(),
-      password: initial?.password ?? '',
       rol,
       termosAsignados: rol === 'admin' ? [] : termosAsignados,
       creadoEn: initial?.creadoEn ?? new Date().toISOString(),

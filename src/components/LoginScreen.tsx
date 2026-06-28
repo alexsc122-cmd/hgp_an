@@ -25,18 +25,19 @@ export default function LoginScreen({ onLogin }: Props) {
       // 1. Find user profile in Firestore
       let found = await fsGetUsuarioByLogin(usuario.trim());
 
-      // Auto-bootstrap admin on first run (only if no user found and username is 'admin')
+      // Auto-bootstrap admin on first run (only if DB is completely empty)
       if (!found && usuario.trim() === 'admin') {
         const allUsers = await fsLoadUsuarios();
         if (allUsers.length === 0) {
+          const adminEmail = 'admin@vivens.local';
           const admin: Usuario = {
             id: '1', nombre: 'Administrador', usuario: 'admin',
-            email: 'admin@vivens.local', password: 'admin123',
+            email: adminEmail,
             rol: 'admin', termosAsignados: [],
             creadoEn: new Date().toISOString(),
           };
           await fsSaveUsuario(admin);
-          await fsAuthCreateUser('admin@vivens.local', 'admin123');
+          await fsAuthCreateUser(adminEmail);
           found = admin;
         }
       }
@@ -60,12 +61,12 @@ export default function LoginScreen({ onLogin }: Props) {
       } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
         setError('Usuario o contraseña incorrectos.');
       } else if (code === 'auth/user-not-found') {
-        // Legacy user without Firebase Auth account — create it on first login
+        // Legacy user without Firebase Auth account — migrate on first login
         try {
           const found2 = await fsGetUsuarioByLogin(usuario.trim());
           if (found2) {
             const authEmail = found2.email?.trim() || toFallbackEmail(found2.usuario);
-            await fsAuthCreateUser(authEmail, found2.password);
+            await fsAuthCreateUser(authEmail);
             await fsAuthLogin(authEmail, password);
             setSession(found2);
             onLogin(found2);

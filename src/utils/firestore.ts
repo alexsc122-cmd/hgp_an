@@ -29,10 +29,10 @@ export async function fsAuthLogout(): Promise<void> {
   await signOut(auth);
 }
 
-export async function fsAuthCreateUser(email: string, _password: string): Promise<void> {
+export async function fsAuthCreateUser(email: string): Promise<void> {
   try {
-    // Use a random temp password — user sets their own via the reset email
-    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+    const tempPassword = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 12) + 'A1!';
     await createUserWithEmailAndPassword(auth, email, tempPassword);
     await sendPasswordResetEmail(auth, email);
   } catch (err: unknown) {

@@ -3,12 +3,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBolZ9vMyaY6Ay5yTd7Di6a_1ckHQUzpPA",
-  authDomain: "rpis-temperatura.firebaseapp.com",
-  projectId: "rpis-temperatura",
-  storageBucket: "rpis-temperatura.firebasestorage.app",
-  messagingSenderId: "61307858613",
-  appId: "1:61307858613:web:53abb7a4b7a218c3f2d8fc"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

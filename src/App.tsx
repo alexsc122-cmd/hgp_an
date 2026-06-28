@@ -428,8 +428,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const handleSaveUser = async (u: Usuario) => {
     try {
       await fsSaveUsuario(u);
-      // Register in Firebase Auth with real email and send password setup link
-      await fsAuthCreateUser(u.email, u.password);
+      await fsAuthCreateUser(u.email);
       const updated = editUser ? usuarios.map(x => x.id === u.id ? u : x) : [...usuarios, u];
       setUsuarios(updated);
       setUserModalOpen(false);
