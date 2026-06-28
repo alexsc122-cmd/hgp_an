@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Termohigrometro } from '../types';
+import { Termohigrometro, Usuario } from '../types';
+import { fsLoadUsuarios } from '../utils/firestore';
 
 interface Props {
   initial?: Termohigrometro | null;
@@ -15,6 +16,11 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
   const [ubicacion, setUbicacion] = useState('');
   const [revisadoPor, setRevisadoPor] = useState('');
   const [cargo, setCargo] = useState('');
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+
+  useEffect(() => {
+    fsLoadUsuarios().then(setUsuarios).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (initial) {
@@ -123,12 +129,27 @@ export default function TermoModal({ initial, ubicaciones, onSave, onCancel }: P
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold text-gray-600">Revisado por</label>
-                <input
-                  className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
-                  placeholder="Nombre completo del responsable"
-                  value={revisadoPor}
-                  onChange={e => setRevisadoPor(e.target.value)}
-                />
+                {usuarios.length > 0 ? (
+                  <select
+                    className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
+                    value={revisadoPor}
+                    onChange={e => setRevisadoPor(e.target.value)}
+                  >
+                    <option value="">— Selecciona un usuario —</option>
+                    {usuarios.map(u => (
+                      <option key={u.id} value={u.nombre}>
+                        {u.nombre} ({u.rol === 'admin' ? 'Admin' : u.rol === 'validador' ? 'Validador' : 'Operador'})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                    placeholder="Nombre completo del responsable"
+                    value={revisadoPor}
+                    onChange={e => setRevisadoPor(e.target.value)}
+                  />
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold text-gray-600">Cargo</label>
