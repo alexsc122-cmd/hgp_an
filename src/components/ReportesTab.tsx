@@ -266,7 +266,7 @@ export default function ReportesTab({ termos }: Props) {
               onChange={e => setSelectedTermoId(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              {termos.map(t => (
+              {[...termos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map(t => (
                 <option key={t.id} value={t.id}>
                   {t.nombre}{t.numero ? ` — N° ${t.numero}` : ''}{t.ubicacion ? ` (${t.ubicacion})` : ''}
                 </option>
