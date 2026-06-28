@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import { useReactToPrint } from 'react-to-print';
-import { Termohigrometro, Anexo10Data, Anexo11Data, MESES, Usuario } from './types';
+import { Termohigrometro, Anexo10Data, Anexo11Data, MESES, Usuario, MesValidacion } from './types';
 import {
   emptyEntries10, emptyEntries11,
   getSession, setSession,
@@ -1011,7 +1011,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   // ─── Anexo 10 state ───
   const [anexo10, setAnexo10] = useState<Anexo10Data>({
     header: defaultHeader,
-    footer: { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' },
+    footer: { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' },
     entries: emptyEntries10(currentYear, currentMonthNum),
   });
   const [lockedDays10, setLockedDays10] = useState<Set<number>>(new Set());
@@ -1021,12 +1021,57 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   // ─── Anexo 11 state ───
   const [anexo11, setAnexo11] = useState<Anexo11Data>({
     header: defaultHeader,
-    footer: { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' },
+    footer: { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' },
     entries: emptyEntries11(currentYear, currentMonthNum),
   });
   const [lockedDays11, setLockedDays11] = useState<Set<number>>(new Set());
   const [lockedAt11, setLockedAt11] = useState<Record<number, number>>({});
   const [loadedKey11, setLoadedKey11] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
+  const [validacion, setValidacion] = useState<MesValidacion | null>(null);
+  const [validating, setValidating] = useState(false);
+
+  const canValidate = currentUser.rol === 'admin' || currentUser.rol === 'validador';
+  const activeData = isAmbiental ? anexo10 : anexo11;
+  const activeFooter = activeData.footer;
+
+  const handleValidar = async () => {
+    if (!activeFooter.revisadoPor || !activeFooter.cargo || !activeFooter.fecha) {
+      alert('Completa Revisado por, Cargo y Fecha antes de validar.');
+      return;
+    }
+    if (!window.confirm(`¿Cerrar y validar el mes ${MESES[selectedMonth - 1]} ${selectedYear}? Esta acción solo la puede revertir el administrador.`)) return;
+    setValidating(true);
+    const v: MesValidacion = {
+      validadoPor: currentUser.nombre,
+      validadoCargo: activeFooter.cargo,
+      validadoFecha: activeFooter.fecha,
+      validadoEn: Date.now(),
+      validadoUsuario: currentUser.usuario,
+    };
+    try {
+      const updated = isAmbiental
+        ? { ...anexo10, validacion: v }
+        : { ...anexo11, validacion: v };
+      await fsSaveRegistro(termo.id, selectedYear, selectedMonth, updated);
+      if (isAmbiental) setAnexo10(updated as Anexo10Data);
+      else setAnexo11(updated as Anexo11Data);
+      setValidacion(v);
+    } catch { alert('Error al guardar la validación.'); }
+    setValidating(false);
+  };
+
+  const handleRevertir = async () => {
+    if (!window.confirm('¿Revertir la validación? El mes quedará abierto para edición.')) return;
+    try {
+      const updated = isAmbiental
+        ? { ...anexo10, validacion: undefined }
+        : { ...anexo11, validacion: undefined };
+      await fsSaveRegistro(termo.id, selectedYear, selectedMonth, updated);
+      if (isAmbiental) setAnexo10(updated as Anexo10Data);
+      else setAnexo11(updated as Anexo11Data);
+      setValidacion(null);
+    } catch { alert('Error al revertir la validación.'); }
+  };
 
   const printRef = useRef<HTMLDivElement>(null);
   // Tracks whether locked days were successfully loaded — prevents a failed
@@ -1088,11 +1133,13 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
-          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
+          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
+          if (!footer.cargo) footer.cargo = currentUser.cargo || '';
           setAnexo10({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays10(locked.days);
           setLockedAt10(locked.lockedAt);
+          setValidacion(base?.validacion ?? null);
         } else {
           const base = registro as Anexo11Data | null;
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(currentYear, currentMonthNum);
@@ -1108,11 +1155,13 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             anio: savedHeader?.anio || String(currentYear),
             mes: savedHeader?.mes || mesStr,
           };
-          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
+          const footer = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
           if (!footer.revisadoPor) footer.revisadoPor = currentUser.nombre;
+          if (!footer.cargo) footer.cargo = currentUser.cargo || '';
           setAnexo11({ ...(base ?? { header: fallbackHeader, footer }), header, footer, entries });
           setLockedDays11(locked.days);
           setLockedAt11(locked.lockedAt);
+          setValidacion(base?.validacion ?? null);
         }
         lockedDaysReady.current = true;
         setMonthsWithData(mwd);
@@ -1209,12 +1258,14 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries10(year, month);
           const entries = clearUnlockedNombres(rawEntries, locked.days);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
-          const footer10 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
+          const footer10 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
           if (!footer10.revisadoPor) footer10.revisadoPor = currentUser.nombre;
+          if (!footer10.cargo) footer10.cargo = currentUser.cargo || '';
           setAnexo10({ ...(base ?? { header, footer: footer10 }), header, footer: footer10, entries });
           setLockedDays10(locked.days);
           setLockedAt10(locked.lockedAt);
           setLoadedKey10(newKey);
+          setValidacion(base?.validacion ?? null);
           lockedDaysReady.current = true;
         }
       } else {
@@ -1227,12 +1278,14 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
           const rawEntries = (base?.entries && base.entries.length > 0) ? base.entries : emptyEntries11(year, month);
           const entries = clearUnlockedNombres(rawEntries, locked.days);
           const header = { ...(base?.header ?? { institucion: '', estrategia: '', establecimiento: '', direccion: '', noEquipo: '', anio: String(year), mes: mesStr }), anio: String(year), mes: mesStr, noEquipo: base?.header?.noEquipo || termo.numero };
-          const footer11 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || '', fecha: '' };
+          const footer11 = base?.footer ?? { revisadoPor: termo.revisadoPor || currentUser.nombre, cargo: termo.cargo || currentUser.cargo || '', fecha: '' };
           if (!footer11.revisadoPor) footer11.revisadoPor = currentUser.nombre;
+          if (!footer11.cargo) footer11.cargo = currentUser.cargo || '';
           setAnexo11({ ...(base ?? { header, footer: footer11 }), header, footer: footer11, entries });
           setLockedDays11(locked.days);
           setLockedAt11(locked.lockedAt);
           setLoadedKey11(newKey);
+          setValidacion(base?.validacion ?? null);
           lockedDaysReady.current = true;
         }
       }
@@ -1348,6 +1401,25 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             {' · '}{currentUser.nombre}
           </div>
         </div>
+        {/* Validar / Revertir */}
+        {canValidate && !loading && (
+          validacion ? (
+            <>
+              <span className="text-xs text-green-300 font-semibold hidden sm:block">✅ Validado</span>
+              {currentUser.rol === 'admin' && (
+                <button onClick={handleRevertir}
+                  className="text-xs bg-red-500/80 hover:bg-red-600 px-3 py-1.5 rounded-lg font-medium transition-colors shrink-0 no-print">
+                  Revertir
+                </button>
+              )}
+            </>
+          ) : (
+            <button onClick={handleValidar} disabled={validating}
+              className="text-xs bg-green-600 hover:bg-green-700 disabled:opacity-50 px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 no-print">
+              {validating ? 'Guardando...' : '✅ Validar mes'}
+            </button>
+          )
+        )}
         {/* Print / PDF button */}
         <button
           onClick={() => handlePrint()}
@@ -1382,6 +1454,22 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
             </div>
           ) : (
             <>
+              {/* Validation banner */}
+              {validacion && (
+                <div className="mb-4 flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 no-print">
+                  <span className="text-green-600 text-xl">✅</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-green-800">Mes validado y cerrado</p>
+                    <p className="text-xs text-green-600">
+                      Por <strong>{validacion.validadoPor}</strong> — {validacion.validadoCargo} · {new Date(validacion.validadoEn).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                  {currentUser.rol === 'admin' && (
+                    <button onClick={handleRevertir} className="text-xs text-red-600 hover:text-red-800 font-semibold shrink-0">Revertir</button>
+                  )}
+                </div>
+              )}
+
               {/* Month/year heading */}
               <div className="mb-4 flex items-center gap-3">
                 <h2 className="text-lg font-bold text-blue-900">
@@ -1425,6 +1513,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     canUnlock={currentUser.rol === 'admin' || currentUser.rol === 'validador'}
                     year={year10}
                     month={month10}
+                    validated={!!validacion}
                   />
                   <Anexo10Chart
                     entries={anexo10.entries}
@@ -1461,6 +1550,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     canUnlock={currentUser.rol === 'admin' || currentUser.rol === 'validador'}
                     year={year11}
                     month={month11}
+                    validated={!!validacion}
                   />
                   <Anexo11Chart
                     entries={anexo11.entries}

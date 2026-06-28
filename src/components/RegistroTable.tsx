@@ -13,9 +13,10 @@ function cellCls(outOfRange: boolean) {
 
 // ─── Shared footer ────────────────────────────────────────────────────────────
 
-function FooterFields({ footer, onFooterChange }: {
+function FooterFields({ footer, onFooterChange, readOnly }: {
   footer: { revisadoPor: string; cargo: string; fecha: string };
   onFooterChange: (f: { revisadoPor: string; cargo: string; fecha: string }) => void;
+  readOnly?: boolean;
 }) {
   const fechaDisplay = footer.fecha
     ? new Date(footer.fecha + 'T12:00:00').toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -31,10 +32,11 @@ function FooterFields({ footer, onFooterChange }: {
               {k === 'revisadoPor' ? 'Revisado por' : k === 'cargo' ? 'Cargo' : 'Fecha'}
             </label>
             <input
-              className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 ${readOnly ? 'border-gray-100 bg-gray-50 text-gray-500 cursor-not-allowed' : 'border-teal-200'}`}
               value={footer[k]}
-              onChange={e => onFooterChange({ ...footer, [k]: e.target.value })}
+              onChange={e => !readOnly && onFooterChange({ ...footer, [k]: e.target.value })}
               type={k === 'fecha' ? 'date' : 'text'}
+              readOnly={readOnly}
             />
           </div>
         ))}
@@ -100,6 +102,7 @@ interface Anexo10TableProps {
   canUnlock?: boolean;
   year: number;
   month: number;
+  validated?: boolean;
 }
 
 function rowAlert(e: DailyEntry): boolean {
@@ -111,7 +114,7 @@ function rowAlert(e: DailyEntry): boolean {
   );
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated }: Anexo10TableProps) {
   const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
   const dayLabel = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 6 ? 'Sáb' : d === 0 ? 'Dom' : null; };
   const update = (i: number, field: keyof DailyEntry, val: string) => {
@@ -297,7 +300,8 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
               const locked = lockedDays.has(e.dia);
               const weekend = isWeekend(e.dia);
               const label = dayLabel(e.dia);
-              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              const effectiveLocked = locked || !!validated;
+              const rowBg = effectiveLocked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
               return (
                 <tr key={e.dia} className={rowBg}>
                   <td className={`${tdCls} text-center font-medium w-10 ${weekend ? 'text-slate-400' : 'text-teal-800'}`}>
@@ -308,31 +312,34 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
                   </td>
                   {(['tempManana','tempTarde'] as const).map(f => (
                     <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeTemp10(e[f]))} w-20`}>
-                      {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
+                      {effectiveLocked ? <span className="block text-center text-sm px-1">{e[f]}</span>
                         : <input className={inputNum} type="number" step="0.1" value={e[f]} onChange={ev => update(i, f, ev.target.value)} />}
                     </td>
                   ))}
                   <td className={`${tdCls} ${cellCls(isOutOfRangeTemp10(tProm))} w-20 text-center text-gray-700`}>{tProm}</td>
                   {(['humManana','humTarde'] as const).map(f => (
                     <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeHum10(e[f]))} w-20`}>
-                      {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
+                      {effectiveLocked ? <span className="block text-center text-sm px-1">{e[f]}</span>
                         : <input className={inputNum} type="number" step="0.1" value={e[f]} onChange={ev => update(i, f, ev.target.value)} />}
                     </td>
                   ))}
                   <td className={`${tdCls} ${cellCls(isOutOfRangeHum10(hProm))} w-20 text-center text-gray-700`}>{hProm}</td>
                   <td className={tdCls}>
-                    {locked ? <span className="block text-sm px-1">{e.nombre}</span>
+                    {effectiveLocked ? <span className="block text-sm px-1">{e.nombre}</span>
                       : <input className={inputTxt} value={e.nombre} onChange={ev => update(i, 'nombre', ev.target.value)} />}
                   </td>
                   <td className={tdCls}>
-                    {locked ? <span className="block text-sm px-1">{e.observaciones}</span>
+                    {effectiveLocked ? <span className="block text-sm px-1">{e.observaciones}</span>
                       : <input className={inputTxt} value={e.observaciones} onChange={ev => update(i, 'observaciones', ev.target.value)} />}
                   </td>
                   <td className={`${tdCls} text-center no-print w-10`}>
-                    <button onClick={() => toggleLock(e.dia)} title={locked ? 'Clic para editar' : 'Confirmar día'}
-                      className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-teal-600'}`}>
-                      {locked ? '🔒' : '✓'}
-                    </button>
+                    {!validated && (
+                      <button onClick={() => toggleLock(e.dia)} title={locked ? 'Clic para editar' : 'Confirmar día'}
+                        className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-teal-600'}`}>
+                        {locked ? '🔒' : '✓'}
+                      </button>
+                    )}
+                    {validated && <span className="text-gray-400 text-base">🔒</span>}
                   </td>
                 </tr>
               );
@@ -353,7 +360,7 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
         </table>
       </div>
 
-      <FooterFields footer={footer} onFooterChange={onFooterChange} />
+      <FooterFields footer={footer} onFooterChange={onFooterChange} readOnly={validated} />
     </div>
   );
 }
@@ -371,6 +378,7 @@ interface Anexo11TableProps {
   canUnlock?: boolean;
   year: number;
   month: number;
+  validated?: boolean;
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -378,7 +386,7 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
     isOutOfRangeTemp11(calcProm(e.tempManana, e.tempTarde));
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated }: Anexo11TableProps) {
   const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
   const dayLabel = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 6 ? 'Sáb' : d === 0 ? 'Dom' : null; };
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
@@ -518,7 +526,8 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
               const locked = lockedDays.has(e.dia);
               const weekend = isWeekend(e.dia);
               const label = dayLabel(e.dia);
-              const rowBg = locked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              const effectiveLocked = locked || !!validated;
+              const rowBg = effectiveLocked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
               return (
                 <tr key={e.dia} className={rowBg}>
                   <td className={`${tdCls} text-center font-medium w-10 ${weekend ? 'text-slate-400' : 'text-teal-800'}`}>
@@ -529,24 +538,27 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
                   </td>
                   {(['tempManana','tempTarde'] as const).map(f => (
                     <td key={f} className={`${tdCls} ${cellCls(isOutOfRangeTemp11(e[f]))} w-24`}>
-                      {locked ? <span className="block text-center text-sm px-1">{e[f]}</span>
+                      {effectiveLocked ? <span className="block text-center text-sm px-1">{e[f]}</span>
                         : <input className={inputNum} type="number" step="0.1" value={e[f]} onChange={ev => update(i, f, ev.target.value)} />}
                     </td>
                   ))}
                   <td className={`${tdCls} ${cellCls(isOutOfRangeTemp11(tProm))} w-24 text-center text-gray-700`}>{tProm}</td>
                   <td className={tdCls}>
-                    {locked ? <span className="block text-sm px-1">{e.nombre}</span>
+                    {effectiveLocked ? <span className="block text-sm px-1">{e.nombre}</span>
                       : <input className={inputTxt} value={e.nombre} onChange={ev => update(i, 'nombre', ev.target.value)} />}
                   </td>
                   <td className={tdCls}>
-                    {locked ? <span className="block text-sm px-1">{e.observaciones}</span>
+                    {effectiveLocked ? <span className="block text-sm px-1">{e.observaciones}</span>
                       : <input className={inputTxt} value={e.observaciones} onChange={ev => update(i, 'observaciones', ev.target.value)} />}
                   </td>
                   <td className={`${tdCls} text-center no-print w-10`}>
-                    <button onClick={() => toggleLock(e.dia)} title={locked ? 'Clic para editar' : 'Confirmar día'}
-                      className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-orange-500'}`}>
-                      {locked ? '🔒' : '✓'}
-                    </button>
+                    {!validated && (
+                      <button onClick={() => toggleLock(e.dia)} title={locked ? 'Clic para editar' : 'Confirmar día'}
+                        className={`text-base transition-opacity hover:opacity-70 ${locked ? 'text-gray-500' : 'text-orange-500'}`}>
+                        {locked ? '🔒' : '✓'}
+                      </button>
+                    )}
+                    {validated && <span className="text-gray-400 text-base">🔒</span>}
                   </td>
                 </tr>
               );
@@ -564,7 +576,7 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
         </table>
       </div>
 
-      <FooterFields footer={footer} onFooterChange={onFooterChange} />
+      <FooterFields footer={footer} onFooterChange={onFooterChange} readOnly={validated} />
     </div>
   );
 }
