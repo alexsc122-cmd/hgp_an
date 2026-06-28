@@ -8,9 +8,10 @@ interface Props {
   anexoTitle: string;
   anexoSubtitle: string;
   lockedFields?: (keyof HeaderInfo)[];
+  ubicacion?: string;
 }
 
-export default function HeaderForm({ data, onChange, equipoLabel = 'No. Termohigrómetro', anexoTitle, anexoSubtitle, lockedFields = [] }: Props) {
+export default function HeaderForm({ data, onChange, equipoLabel = 'No. Termohigrómetro', anexoTitle, anexoSubtitle, lockedFields = [], ubicacion }: Props) {
   const field = (label: string, key: keyof HeaderInfo, extra?: React.InputHTMLAttributes<HTMLInputElement>) => {
     const isLocked = lockedFields.includes(key);
     return (
@@ -55,8 +56,16 @@ export default function HeaderForm({ data, onChange, equipoLabel = 'No. Termohig
       </div>
 
       {/* Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {field(equipoLabel, 'noEquipo')}
+        {ubicacion !== undefined && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Ubicación</label>
+            <div className="border border-teal-100 bg-teal-50 text-teal-800 rounded px-2 py-1 text-sm select-none">
+              {ubicacion || '—'}
+            </div>
+          </div>
+        )}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Año</label>
           <select

@@ -1523,6 +1523,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
                     anexoTitle="ANEXO 10 — REGISTRO DE TEMPERATURA Y HUMEDAD AMBIENTAL"
                     anexoSubtitle="Almacén / Bodega Farmacéutica"
                     lockedFields={(['institucion','estrategia','establecimiento','direccion','noEquipo'] as const).filter(k => k === 'noEquipo' || !!config[k as keyof AppConfig])}
+                    ubicacion={termo.ubicacion}
                   />
                   <Anexo10Table
                     entries={anexo10.entries}
@@ -1561,6 +1562,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
                     anexoTitle="ANEXO 11 — REGISTRO DE TEMPERATURA DE REFRIGERACIÓN"
                     anexoSubtitle="Almacén / Cadena de Frío Farmacéutica"
                     lockedFields={(['institucion','estrategia','establecimiento','direccion','noEquipo'] as const).filter(k => k === 'noEquipo' || !!config[k as keyof AppConfig])}
+                    ubicacion={termo.ubicacion}
                   />
                   <Anexo11Table
                     entries={anexo11.entries}
