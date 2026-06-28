@@ -912,6 +912,27 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `RPIS_${termo.nombre}_${MESES[selectedMonth - 1]}_${selectedYear}`,
+    pageStyle: `
+      @page { size: A4 portrait; margin: 8mm; }
+      body { background: white !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .screen-header { display: none !important; }
+      .no-print { display: none !important; }
+      .mobile-cards { display: none !important; }
+      .print-only { display: block !important; }
+      .desktop-table { display: block !important; overflow: visible !important; }
+      .desktop-table table { width: 100% !important; min-width: unset !important; border-collapse: collapse !important; table-layout: fixed !important; }
+      .desktop-table *, .desktop-table input, .desktop-table span, .desktop-table th, .desktop-table td { font-size: 7px !important; line-height: 1.2 !important; padding: 1px 3px !important; height: auto !important; }
+      .desktop-table table th:nth-child(1), .desktop-table table td:nth-child(1) { width: 18px !important; white-space: nowrap; }
+      .desktop-table table td:nth-child(2), .desktop-table table td:nth-child(3), .desktop-table table td:nth-child(4), .desktop-table table td:nth-child(5), .desktop-table table td:nth-child(6), .desktop-table table td:nth-child(7) { width: 30px !important; white-space: nowrap; overflow: hidden; }
+      .desktop-table table td:nth-child(8) { white-space: normal !important; word-break: break-word; }
+      .desktop-table table td:nth-child(9) { white-space: normal !important; }
+      .print-container { display: flex !important; flex-direction: column !important; min-height: 277mm !important; }
+      .footer-screen { display: none !important; }
+      .footer-print { display: flex !important; margin-top: auto !important; }
+      .print-charts-row { display: flex !important; flex-direction: row !important; gap: 8px !important; margin-top: 8px !important; page-break-inside: avoid !important; }
+      .print-charts-single { display: block !important; margin-top: 8px !important; page-break-inside: avoid !important; }
+    `,
   });
 
   // Initial load
