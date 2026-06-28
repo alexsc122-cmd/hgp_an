@@ -18,7 +18,7 @@ import {
   fsGetUsuarioByLogin,
   fsLoadConfig, fsSaveConfig, AppConfig,
   fsExportAllData, fsDeleteAllData, fsImportData, ExportRow,
-  fsLoadExceptionalDays, fsSaveExceptionalDay, fsDeleteExceptionalDay,
+  fsLoadExceptionalDays, fsSaveExceptionalDay, fsDeleteExceptionalDay, ExceptionalDay,
 } from './utils/firestore';
 import { isWorkday } from './utils/holidays';
 import HeaderForm from './components/HeaderForm';
@@ -168,8 +168,8 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
   config: AppConfig;
   onSave: (c: AppConfig) => void;
   termos: Termohigrometro[];
-  exceptionalDays: string[];
-  onExceptionalDaysChange: (days: string[]) => void;
+  exceptionalDays: ExceptionalDay[];
+  onExceptionalDaysChange: (days: ExceptionalDay[]) => void;
 }) {
   const [form, setForm] = useState<AppConfig>(config);
   const [saving, setSaving] = useState(false);
@@ -183,15 +183,18 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
 
   // Días excepcionales
   const [newDay, setNewDay] = useState('');
+  const [newDayDesc, setNewDayDesc] = useState('');
   const [savingDay, setSavingDay] = useState(false);
 
   const handleAddExceptionalDay = async () => {
-    if (!newDay || exceptionalDays.includes(newDay)) return;
+    if (!newDay || exceptionalDays.some(d => d.fecha === newDay)) return;
     setSavingDay(true);
     try {
-      await fsSaveExceptionalDay(newDay);
-      onExceptionalDaysChange([...exceptionalDays, newDay].sort());
+      await fsSaveExceptionalDay(newDay, newDayDesc.trim());
+      const entry: ExceptionalDay = { fecha: newDay, descripcion: newDayDesc.trim() };
+      onExceptionalDaysChange([...exceptionalDays, entry].sort((a, b) => a.fecha.localeCompare(b.fecha)));
       setNewDay('');
+      setNewDayDesc('');
     } catch { alert('Error al guardar el día.'); }
     setSavingDay(false);
   };
@@ -199,7 +202,7 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
   const handleDeleteExceptionalDay = async (fecha: string) => {
     try {
       await fsDeleteExceptionalDay(fecha);
-      onExceptionalDaysChange(exceptionalDays.filter(d => d !== fecha));
+      onExceptionalDaysChange(exceptionalDays.filter(d => d.fecha !== fecha));
     } catch { alert('Error al eliminar el día.'); }
   };
 
@@ -354,6 +357,14 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
             type="date"
             value={newDay}
             onChange={e => setNewDay(e.target.value)}
+            className="border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+          />
+          <input
+            type="text"
+            placeholder="Descripción (ej: Carnaval)"
+            value={newDayDesc}
+            onChange={e => setNewDayDesc(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAddExceptionalDay()}
             className="flex-1 border border-teal-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
           />
           <button
@@ -369,9 +380,12 @@ function ConfigTab({ config, onSave, termos, exceptionalDays, onExceptionalDaysC
         ) : (
           <ul className="divide-y divide-gray-100">
             {exceptionalDays.map(d => (
-              <li key={d} className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-800">📅 {fmtFecha(d)}</span>
-                <button onClick={() => handleDeleteExceptionalDay(d)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
+              <li key={d.fecha} className="flex items-center justify-between py-2">
+                <div>
+                  <span className="text-sm text-gray-800">📅 {fmtFecha(d.fecha)}</span>
+                  {d.descripcion && <span className="ml-2 text-xs text-gray-500">— {d.descripcion}</span>}
+                </div>
+                <button onClick={() => handleDeleteExceptionalDay(d.fecha)} className="text-red-500 hover:text-red-700 text-xs font-semibold">Eliminar</button>
               </li>
             ))}
           </ul>
@@ -558,8 +572,8 @@ interface DashboardProps {
   onLogout: () => void;
   onReport?: () => void;
   onUbicacionRename?: (oldNombre: string, newNombre: string) => void;
-  exceptionalDays: string[];
-  onExceptionalDaysChange: (days: string[]) => void;
+  exceptionalDays: ExceptionalDay[];
+  onExceptionalDaysChange: (days: ExceptionalDay[]) => void;
 }
 
 function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onView, onAdd, onEdit, onDelete, onLogout, onReport, onUbicacionRename, exceptionalDays, onExceptionalDaysChange }: DashboardProps) {
@@ -572,7 +586,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
 
   const pendingCount = (() => {
     const today = new Date();
-    if (!isWorkday(today, exceptionalDays)) return 0;
+    if (!isWorkday(today, exceptionalDays.map(d => d.fecha))) return 0;
     return termos.filter(t => {
       const s = todayStatus[t.id];
       if (!s || s.locked) return false;
@@ -991,9 +1005,10 @@ interface RegistroScreenProps {
   currentUser: Usuario;
   config: AppConfig;
   onBack: () => void;
+  exceptionalDays: ExceptionalDay[];
 }
 
-function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenProps) {
+function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }: RegistroScreenProps) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonthNum = now.getMonth() + 1;
@@ -1521,6 +1536,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     year={year10}
                     month={month10}
                     validated={!!validacion}
+                    exceptionalDays={exceptionalDays.map(d => d.fecha)}
                   />
                   <Anexo10Chart
                     entries={anexo10.entries}
@@ -1558,6 +1574,7 @@ function RegistroScreen({ termo, currentUser, config, onBack }: RegistroScreenPr
                     year={year11}
                     month={month11}
                     validated={!!validacion}
+                    exceptionalDays={exceptionalDays.map(d => d.fecha)}
                   />
                   <Anexo11Chart
                     entries={anexo11.entries}
@@ -1581,7 +1598,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [termos, setTermos] = useState<Termohigrometro[]>([]);
   const [ubicaciones, setUbicaciones] = useState<string[]>([]);
-  const [exceptionalDays, setExceptionalDays] = useState<string[]>([]);
+  const [exceptionalDays, setExceptionalDays] = useState<ExceptionalDay[]>([]);
 
   // Wait for Firebase Auth to initialize, then restore session
   useEffect(() => {
@@ -1714,6 +1731,7 @@ export default function App() {
         currentUser={currentUser}
         config={appConfig}
         onBack={() => setSelectedTermo(null)}
+        exceptionalDays={exceptionalDays}
       />
     );
   }

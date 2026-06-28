@@ -176,14 +176,18 @@ export async function fsRenameUbicacion(oldNombre: string, newNombre: string): P
 
 // ─── Días excepcionales no laborables ────────────────────────────────────────
 
-export async function fsLoadExceptionalDays(): Promise<string[]> {
+export interface ExceptionalDay { fecha: string; descripcion: string; }
+
+export async function fsLoadExceptionalDays(): Promise<ExceptionalDay[]> {
   const snap = await getDocs(collection(db, 'diasNoLaborables'));
-  return snap.docs.map(d => d.data().fecha as string).sort();
+  return snap.docs
+    .map(d => ({ fecha: d.data().fecha as string, descripcion: (d.data().descripcion ?? '') as string }))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
 }
 
-export async function fsSaveExceptionalDay(fecha: string): Promise<void> {
+export async function fsSaveExceptionalDay(fecha: string, descripcion = ''): Promise<void> {
   const id = fecha.replace(/-/g, '');
-  await setDoc(doc(db, 'diasNoLaborables', id), { fecha });
+  await setDoc(doc(db, 'diasNoLaborables', id), { fecha, descripcion });
 }
 
 export async function fsDeleteExceptionalDay(fecha: string): Promise<void> {

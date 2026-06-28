@@ -103,6 +103,7 @@ interface Anexo10TableProps {
   year: number;
   month: number;
   validated?: boolean;
+  exceptionalDays?: string[];
 }
 
 function rowAlert(e: DailyEntry): boolean {
@@ -114,8 +115,10 @@ function rowAlert(e: DailyEntry): boolean {
   );
 }
 
-export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated }: Anexo10TableProps) {
+export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated, exceptionalDays = [] }: Anexo10TableProps) {
   const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
+  const isoDate = (dia: number) => `${year}-${String(month).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  const isExceptional = (dia: number) => exceptionalDays.includes(isoDate(dia));
   const dayLabel = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 6 ? 'Sáb' : d === 0 ? 'Dom' : null; };
   const update = (i: number, field: keyof DailyEntry, val: string) => {
     const tsField = (field === 'tempManana' || field === 'humManana') ? 'tsManana'
@@ -299,15 +302,17 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
               const alert = rowAlert(e);
               const locked = lockedDays.has(e.dia);
               const weekend = isWeekend(e.dia);
+              const exceptional = isExceptional(e.dia);
               const label = dayLabel(e.dia);
               const effectiveLocked = locked || !!validated;
-              const rowBg = effectiveLocked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              const rowBg = effectiveLocked ? 'bg-gray-50' : alert ? 'bg-red-50' : (weekend || exceptional) ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
               return (
                 <tr key={e.dia} className={rowBg}>
-                  <td className={`${tdCls} text-center font-medium w-10 ${weekend ? 'text-slate-400' : 'text-teal-800'}`}>
+                  <td className={`${tdCls} text-center font-medium w-10 ${(weekend || exceptional) ? 'text-slate-400' : 'text-teal-800'}`}>
                     <div className="flex flex-col items-center leading-tight">
                       <span>{e.dia}</span>
                       {label && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{label}</span>}
+                      {exceptional && !label && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">NL</span>}
                     </div>
                   </td>
                   {(['tempManana','tempTarde'] as const).map(f => (
@@ -379,6 +384,7 @@ interface Anexo11TableProps {
   year: number;
   month: number;
   validated?: boolean;
+  exceptionalDays?: string[];
 }
 
 function rowAlert11(e: RefrigDailyEntry): boolean {
@@ -386,8 +392,10 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
     isOutOfRangeTemp11(calcProm(e.tempManana, e.tempTarde));
 }
 
-export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated }: Anexo11TableProps) {
+export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated, exceptionalDays = [] }: Anexo11TableProps) {
   const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
+  const isoDate = (dia: number) => `${year}-${String(month).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  const isExceptional = (dia: number) => exceptionalDays.includes(isoDate(dia));
   const dayLabel = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 6 ? 'Sáb' : d === 0 ? 'Dom' : null; };
   const update = (i: number, field: keyof RefrigDailyEntry, val: string) => {
     const tsField = field === 'tempManana' ? 'tsManana' : field === 'tempTarde' ? 'tsTarde' : null;
@@ -525,15 +533,17 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
               const alert = rowAlert11(e);
               const locked = lockedDays.has(e.dia);
               const weekend = isWeekend(e.dia);
+              const exceptional = isExceptional(e.dia);
               const label = dayLabel(e.dia);
               const effectiveLocked = locked || !!validated;
-              const rowBg = effectiveLocked ? 'bg-gray-50' : alert ? 'bg-red-50' : weekend ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
+              const rowBg = effectiveLocked ? 'bg-gray-50' : alert ? 'bg-red-50' : (weekend || exceptional) ? 'bg-slate-100' : i % 2 === 0 ? 'bg-white' : 'bg-teal-50/20';
               return (
                 <tr key={e.dia} className={rowBg}>
-                  <td className={`${tdCls} text-center font-medium w-10 ${weekend ? 'text-slate-400' : 'text-teal-800'}`}>
+                  <td className={`${tdCls} text-center font-medium w-10 ${(weekend || exceptional) ? 'text-slate-400' : 'text-teal-800'}`}>
                     <div className="flex flex-col items-center leading-tight">
                       <span>{e.dia}</span>
                       {label && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{label}</span>}
+                      {exceptional && !label && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">NL</span>}
                     </div>
                   </td>
                   {(['tempManana','tempTarde'] as const).map(f => (
