@@ -581,6 +581,9 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   })();
   const [sortBy, setSortBy] = useState<'nombre' | 'ubicacion' | 'tipo'>('nombre');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterUbicacion, setFilterUbicacion] = useState<string | null>(null);
+  const [filterTipo, setFilterTipo] = useState<'ambiental' | 'refrigeracion' | null>(null);
   const [todayStatus, setTodayStatus] = useState<Record<string, { manana: boolean; tarde: boolean; locked: boolean }>>({});
 
   useEffect(() => {
@@ -764,6 +767,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                 <p className="text-sm text-gray-500 mt-0.5">
                   {termos.length === 0 ? 'Sin equipos aún' : `${termos.length} equipo${termos.length !== 1 ? 's' : ''}`}
                 </p>
+
               </div>
               {isAdmin && (
                 <button
@@ -775,50 +779,81 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
               )}
             </div>
             {termos.length > 0 && (
-              <div className="flex gap-2 mb-4 flex-wrap items-center justify-between">
+              <div className="space-y-2 mb-4">
+                {/* Row 1: search + view toggle */}
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="search"
+                    placeholder="Buscar por nombre…"
+                    value={filterSearch}
+                    onChange={e => setFilterSearch(e.target.value)}
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  />
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                    <button onClick={() => setViewMode('grid')} title="Vista cuadrícula"
+                      className={`px-2.5 py-1.5 transition-colors ${viewMode === 'grid' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                        <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+                        <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+                      </svg>
+                    </button>
+                    <button onClick={() => setViewMode('list')} title="Vista lista"
+                      className={`px-2.5 py-1.5 border-l border-gray-200 transition-colors ${viewMode === 'list' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                        <rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/>
+                        <rect x="1" y="11.5" width="14" height="2.5" rx="1"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Row 2: sort + tipo filter + ubicacion filter */}
                 <div className="flex gap-2 flex-wrap items-center">
-                  <span className="text-sm text-gray-500">Ordenar por:</span>
+                  <span className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Ordenar:</span>
                   {(['nombre', 'ubicacion', 'tipo'] as const).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setSortBy(opt)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                        sortBy === opt
-                          ? 'bg-teal-700 text-white'
-                          : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
+                    <button key={opt} onClick={() => setSortBy(opt)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${sortBy === opt ? 'bg-teal-700 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
                       {opt === 'nombre' ? 'Nombre' : opt === 'ubicacion' ? 'Ubicación' : 'Tipo'}
                     </button>
                   ))}
-                </div>
-                {/* Vista grid / lista */}
-                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    title="Vista cuadrícula"
-                    className={`px-2.5 py-1.5 transition-colors ${viewMode === 'grid' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                      <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
-                      <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    title="Vista lista"
-                    className={`px-2.5 py-1.5 border-l border-gray-200 transition-colors ${viewMode === 'list' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-                      <rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/>
-                      <rect x="1" y="11.5" width="14" height="2.5" rx="1"/>
-                    </svg>
-                  </button>
+
+                  <span className="text-gray-200 mx-1 select-none">|</span>
+                  <span className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Tipo:</span>
+                  {([null, 'ambiental', 'refrigeracion'] as const).map(t => (
+                    <button key={String(t)} onClick={() => setFilterTipo(t)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filterTipo === t ? 'bg-blue-700 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      {t === null ? 'Todos' : t === 'ambiental' ? '🌡 Ambiente' : '❄️ Refrigeración'}
+                    </button>
+                  ))}
+
+                  {(() => {
+                    const ubicsUnicas = [...new Set(termos.map(t => t.ubicacion).filter(Boolean))].sort();
+                    if (ubicsUnicas.length < 2) return null;
+                    return <>
+                      <span className="text-gray-200 mx-1 select-none">|</span>
+                      <span className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Ubicación:</span>
+                      <button onClick={() => setFilterUbicacion(null)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filterUbicacion === null ? 'bg-blue-700 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                        Todas
+                      </button>
+                      {ubicsUnicas.map(u => (
+                        <button key={u} onClick={() => setFilterUbicacion(filterUbicacion === u ? null : u)}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filterUbicacion === u ? 'bg-blue-700 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                          {u}
+                        </button>
+                      ))}
+                    </>;
+                  })()}
                 </div>
               </div>
             )}
             {(() => {
-              const sortedTermos = [...termos].sort((a, b) => {
+              const q = filterSearch.trim().toLowerCase();
+              const filteredTermos = termos
+                .filter(t => !q || t.nombre.toLowerCase().includes(q))
+                .filter(t => !filterTipo || t.tipo === filterTipo)
+                .filter(t => !filterUbicacion || t.ubicacion === filterUbicacion);
+              const sortedTermos = [...filteredTermos].sort((a, b) => {
                 if (sortBy === 'nombre') return a.nombre.localeCompare(b.nombre);
                 if (sortBy === 'ubicacion') return (a.ubicacion || '').localeCompare(b.ubicacion || '');
                 if (sortBy === 'tipo') return a.tipo.localeCompare(b.tipo);
@@ -834,6 +869,14 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                       Agregar primer equipo
                     </button>
                   )}
+                </div>
+              ) : sortedTermos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="text-3xl mb-3">🔍</div>
+                  <p className="text-sm font-semibold text-gray-600 mb-1">Sin resultados</p>
+                  <p className="text-xs text-gray-400">Prueba con otros filtros.</p>
+                  <button onClick={() => { setFilterSearch(''); setFilterTipo(null); setFilterUbicacion(null); }}
+                    className="mt-3 text-xs text-teal-600 hover:underline">Limpiar filtros</button>
                 </div>
               ) : (
                 <div className={viewMode === 'grid'
