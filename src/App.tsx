@@ -596,7 +596,10 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
     }).length;
   })();
   const [sortBy, setSortBy] = useState<'nombre' | 'ubicacion' | 'tipo'>('nombre');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(
+    () => (localStorage.getItem('viewMode') as 'grid' | 'list') ?? 'grid'
+  );
+  const changeViewMode = (m: 'grid' | 'list') => { setViewMode(m); localStorage.setItem('viewMode', m); };
   const [filterSearch, setFilterSearch] = useState('');
   const [filterUbicacion, setFilterUbicacion] = useState<string | null>(null);
   const [filterTipo, setFilterTipo] = useState<'ambiental' | 'refrigeracion' | null>(null);
@@ -806,14 +809,14 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                     className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                   />
                   <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
-                    <button onClick={() => setViewMode('grid')} title="Vista cuadrícula"
+                    <button onClick={() => changeViewMode('grid')} title="Vista cuadrícula"
                       className={`px-2.5 py-1.5 transition-colors ${viewMode === 'grid' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
                         <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
                         <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
                       </svg>
                     </button>
-                    <button onClick={() => setViewMode('list')} title="Vista lista"
+                    <button onClick={() => changeViewMode('list')} title="Vista lista"
                       className={`px-2.5 py-1.5 border-l border-gray-200 transition-colors ${viewMode === 'list' ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-50'}`}>
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
                         <rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/>
