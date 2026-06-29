@@ -45,7 +45,7 @@ interface RangePoint {
 
 export default function ReportesTab({ termos }: Props) {
   const now = new Date();
-  const [mode, setMode] = useState<'mes' | 'rango'>('mes');
+  const [mode, setMode] = useState<'mes' | 'rango' | 'calibraciones'>('mes');
   const [selectedTermoId, setSelectedTermoId] = useState<string>(termos[0]?.id ?? '');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -71,7 +71,9 @@ export default function ReportesTab({ termos }: Props) {
     contentRef: printRef,
     documentTitle: mode === 'mes'
       ? `Reporte_${termo?.nombre ?? ''}_${MESES[selectedMonth - 1]}_${selectedYear}`
-      : `Reporte_${termo?.nombre ?? ''}_${MESES[rangeFromMonth - 1]}${rangeFromYear}_${MESES[rangeToMonth - 1]}${rangeToYear}`,
+      : mode === 'rango'
+      ? `Reporte_${termo?.nombre ?? ''}_${MESES[rangeFromMonth - 1]}${rangeFromYear}_${MESES[rangeToMonth - 1]}${rangeToYear}`
+      : `Calibraciones_${termo?.nombre ?? ''}`,
   });
 
   // Load months with data and calibraciones when termo changes
@@ -250,14 +252,14 @@ export default function ReportesTab({ termos }: Props) {
       {/* ─── Selectors ─── */}
       <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
         {/* Mode toggle */}
-        <div className="flex gap-2 mb-4">
-          {(['mes', 'rango'] as const).map(m => (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {(['mes', 'rango', 'calibraciones'] as const).map(m => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${mode === m ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
             >
-              {m === 'mes' ? '📅 Por mes' : '📆 Rango de meses'}
+              {m === 'mes' ? '📅 Por mes' : m === 'rango' ? '📆 Rango de meses' : '🔬 Calibraciones'}
             </button>
           ))}
         </div>
@@ -330,11 +332,32 @@ export default function ReportesTab({ termos }: Props) {
           </>}
 
           {/* Info badge */}
-          {termo && (
+          {termo && mode !== 'calibraciones' && (
             <div className={`px-3 py-2 rounded-lg text-xs font-semibold ${isAmbiental ? 'bg-blue-100 text-blue-800' : 'bg-teal-100 text-teal-800'}`}>
               {isAmbiental ? '🌡️ Temperatura Ambiental' : '❄️ Refrigeración'}
             </div>
           )}
+
+          {/* Vigencia badge (calibraciones mode) */}
+          {termo && mode === 'calibraciones' && (() => {
+            const lastFecha = calibraciones[0]?.fecha;
+            if (!lastFecha) return (
+              <div className="px-3 py-2 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600">
+                Sin calibraciones
+              </div>
+            );
+            const days = Math.floor((Date.now() - new Date(lastFecha).getTime()) / 86400000);
+            const [bg, text, label] = days < 330
+              ? ['bg-green-100', 'text-green-800', '✓ Al día']
+              : days <= 365
+              ? ['bg-yellow-100', 'text-yellow-800', '⚠ Próxima a vencer']
+              : ['bg-red-100', 'text-red-800', '✗ Vencida'];
+            return (
+              <div className={`px-3 py-2 rounded-lg text-xs font-semibold ${bg} ${text}`}>
+                {label} ({days} días)
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -461,6 +484,126 @@ export default function ReportesTab({ termos }: Props) {
           </div>
         )
       )}
+
+      {/* ─── Calibraciones mode ─── */}
+      {mode === 'calibraciones' && termo && (() => {
+        const lastFecha = calibraciones[0]?.fecha;
+        const proximaFecha = lastFecha
+          ? new Date(new Date(lastFecha).getTime() + 365 * 86400000).toISOString().slice(0, 10)
+          : null;
+
+        return (
+          <div ref={printRef} className="space-y-5">
+            {/* Print header */}
+            <div className="print-only" style={{ display: 'none' }}>
+              <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '18px 28px 14px' }}>
+                <div style={{ color: 'white', fontSize: '10px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', opacity: 0.85, marginBottom: '4px' }}>
+                  Clínica Renal El Puyo — VIVENS
+                </div>
+                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, lineHeight: 1.2 }}>
+                  Historial de Calibraciones
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', marginTop: '6px' }}>
+                  {termo.nombre}{termo.numero ? ` · N° ${termo.numero}` : ''}{termo.ubicacion ? ` · ${termo.ubicacion}` : ''}
+                </div>
+              </div>
+              <div style={{ background: '#f0fdfa', borderBottom: '1.5px solid #99f6e4', padding: '8px 28px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '11px', color: '#134e4a' }}>
+                <span><strong>Equipo:</strong> {termo.nombre}{termo.numero ? ` — N° ${termo.numero}` : ''}</span>
+                <span><strong>Tipo:</strong> {isAmbiental ? 'Temperatura y Humedad Ambiental' : 'Refrigeración'}</span>
+                {termo.ubicacion && <span><strong>Ubicación:</strong> {termo.ubicacion}</span>}
+                {termo.revisadoPor && <span><strong>Responsable:</strong> {termo.revisadoPor}</span>}
+              </div>
+            </div>
+
+            {/* Print button */}
+            <div className="flex justify-end no-print">
+              <button onClick={() => handlePrint()}
+                className="text-xs bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                🖨️ Imprimir reporte
+              </button>
+            </div>
+
+            {/* Info card */}
+            <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+              <h3 className="text-sm font-bold text-blue-900 mb-3">Información del Equipo</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div><span className="font-semibold text-gray-500">Nombre:</span> <span className="text-gray-800">{termo.nombre}</span></div>
+                {termo.numero && <div><span className="font-semibold text-gray-500">N° Serie:</span> <span className="text-gray-800">{termo.numero}</span></div>}
+                <div><span className="font-semibold text-gray-500">Tipo:</span> <span className="text-gray-800">{isAmbiental ? 'Ambiental' : 'Refrigeración'}</span></div>
+                {termo.ubicacion && <div><span className="font-semibold text-gray-500">Ubicación:</span> <span className="text-gray-800">{termo.ubicacion}</span></div>}
+                {termo.revisadoPor && <div><span className="font-semibold text-gray-500">Revisado por:</span> <span className="text-gray-800">{termo.revisadoPor}</span></div>}
+                {termo.cargo && <div><span className="font-semibold text-gray-500">Cargo:</span> <span className="text-gray-800">{termo.cargo}</span></div>}
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Total calibraciones</p>
+                <p className="text-2xl font-bold text-blue-800">{calibraciones.length}</p>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Última calibración</p>
+                <p className="text-2xl font-bold text-blue-800">{lastFecha ?? '—'}</p>
+              </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                <p className="text-xs font-semibold text-gray-500 mb-1">Próxima calibración</p>
+                <p className="text-2xl font-bold text-blue-800">{proximaFecha ?? 'Pendiente'}</p>
+              </div>
+            </div>
+
+            {/* History table */}
+            {calibraciones.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400 bg-white rounded-xl border border-blue-100">
+                <div className="text-4xl mb-3">🔬</div>
+                <p className="font-semibold text-gray-600">Sin calibraciones registradas</p>
+                <p className="text-sm mt-1">Registra la primera calibración para este equipo</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-blue-50">
+                  <h3 className="text-sm font-bold text-blue-900">Historial de Calibraciones</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-blue-50 text-blue-900 font-semibold">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Fecha</th>
+                        <th className="px-3 py-2 text-left">N° Certificado</th>
+                        <th className="px-3 py-2 text-left">Laboratorio</th>
+                        <th className="px-3 py-2 text-center">Resultado</th>
+                        <th className="px-3 py-2 text-left">Observaciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {calibraciones.map(c => {
+                        const [badgeBg, badgeText] = c.resultado === 'aprobado'
+                          ? ['bg-green-100', 'text-green-800']
+                          : c.resultado === 'con observaciones'
+                          ? ['bg-yellow-100', 'text-yellow-800']
+                          : ['bg-gray-100', 'text-gray-700'];
+                        return (
+                          <tr key={c.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 font-semibold text-gray-700">{c.fecha}</td>
+                            <td className="px-3 py-2 text-gray-700">{c.numeroCertificado || '—'}</td>
+                            <td className="px-3 py-2 text-gray-700">{c.laboratorio || '—'}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${badgeBg} ${badgeText}`}>
+                                {c.resultado === 'aprobado' ? '✓ Aprobado' : c.resultado === 'con observaciones' ? '⚠ Con observaciones' : c.resultado || '—'}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-gray-400">{c.observaciones || '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {mode === 'mes' && (loading ? (
         <div className="flex items-center justify-center py-20">
