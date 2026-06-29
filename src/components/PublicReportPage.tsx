@@ -95,6 +95,14 @@ export default function PublicReportPage() {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Reporte_Publico_${MESES[month - 1]}_${year}`,
+    pageStyle: `
+      @page { size: A4; margin: 10mm; }
+      @media print {
+        body { font-size: 11px; }
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+      }
+    `,
   });
 
   useEffect(() => {
@@ -165,27 +173,38 @@ export default function PublicReportPage() {
             <p className="text-teal-200 text-xs mt-1">Consultado el {loadedAt} · Solo lectura</p>
           </div>
           <button onClick={() => handlePrint()}
-            className="hidden sm:flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
             🖨️ Imprimir
           </button>
         </div>
       </div>
 
-      <div ref={printRef} className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <div ref={printRef} className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
 
         {/* ── Print header ── */}
         <div className="print-only" style={{ display: 'none' }}>
-          <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '16px 28px 12px' }}>
-            <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '4px' }}>Clínica Renal El Puyo — VIVENS</div>
-            <div style={{ color: 'white', fontSize: '18px', fontWeight: 800 }}>Reporte de Registros de Temperatura — {mesLabel}</div>
-            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '9px', marginTop: '4px' }}>Consultado el {loadedAt} · Solo lectura · Uso de organismos de control</div>
+          <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '14px 20px 10px' }}>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase' }}>Clínica Renal El Puyo — VIVENS</div>
+            <div style={{ color: 'white', fontSize: '17px', fontWeight: 800, marginTop: '3px' }}>Reporte de Registros de Temperatura — {mesLabel}</div>
+            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '8px', marginTop: '4px' }}>Solo lectura · Para uso de organismos de control (ARCSA / MSP)</div>
           </div>
-          <div style={{ background: '#f0fdfa', borderBottom: '1.5px solid #99f6e4', padding: '5px 28px', display: 'flex', gap: '24px', fontSize: '9px', color: '#134e4a' }}>
-            <span><strong>Mes:</strong> {mesLabel}</span>
-            <span><strong>Equipos:</strong> {reports.length}</span>
-            <span><strong>Días transcurridos:</strong> {today} de {totalDays}</span>
-            <span><strong>Generado:</strong> {loadedAt}</span>
-          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px', marginTop: 0 }}>
+            <tbody>
+              <tr>
+                {[
+                  ['PERÍODO', mesLabel],
+                  ['EQUIPOS', String(reports.length)],
+                  ['DÍAS LABORABLES TRANSCURRIDOS', `${workdaysToday} de ${Array.from({length: totalDays}, (_,i)=>i+1).filter(d=>!isNonWorkday(d,year,month,exceptionalDates)).length}`],
+                  ['GENERADO', loadedAt],
+                ].map(([label, value]) => (
+                  <td key={label} style={{ border: '1px solid #99f6e4', padding: '5px 8px', background: '#f0fdfa' }}>
+                    <div style={{ fontSize: '7px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase' }}>{label}</div>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#134e4a', marginTop: '2px' }}>{value}</div>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         {/* ── Resumen general ── */}
@@ -446,6 +465,13 @@ export default function PublicReportPage() {
         <div className="text-center text-xs text-gray-400 py-4 border-t border-gray-100">
           Documento generado automáticamente el {loadedAt} · Solo para uso de organismos de control · Clínica Renal El Puyo — VIVENS
         </div>
+      </div>
+      {/* Mobile floating print button */}
+      <div className="sm:hidden no-print fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-50">
+        <button onClick={() => handlePrint()}
+          className="w-full bg-teal-700 text-white text-sm font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+          🖨️ Imprimir / Guardar PDF
+        </button>
       </div>
     </div>
   );
