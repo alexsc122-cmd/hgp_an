@@ -182,7 +182,7 @@ export default function PublicReportPage() {
       <div ref={printRef} className="max-w-5xl mx-auto px-4 py-6 pb-24 sm:pb-6 space-y-6">
 
         {/* ── Print header ── */}
-        <div className="print-only" style={{ display: 'none' }}>
+        <div className="print-only">
           <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '14px 20px 10px' }}>
             <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase' }}>Clínica Renal El Puyo — VIVENS</div>
             <div style={{ color: 'white', fontSize: '17px', fontWeight: 800, marginTop: '3px' }}>Reporte de Registros de Temperatura — {mesLabel}</div>
@@ -466,9 +466,9 @@ export default function PublicReportPage() {
           Documento generado automáticamente el {loadedAt} · Solo para uso de organismos de control · Clínica Renal El Puyo — VIVENS
         </div>
       </div>
-      {/* Mobile floating print button */}
+      {/* Mobile floating print button — uses window.print() so page CSS applies correctly */}
       <div className="sm:hidden no-print fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-50">
-        <button onClick={() => handlePrint()}
+        <button onClick={() => window.print()}
           className="w-full bg-teal-700 text-white text-sm font-bold py-3 rounded-xl flex items-center justify-center gap-2">
           🖨️ Imprimir / Guardar PDF
         </button>
