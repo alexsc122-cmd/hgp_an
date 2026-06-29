@@ -144,6 +144,10 @@ export default function PublicReportPage() {
   const mesLabel = `${MESES[month - 1]} ${year}`;
   const pct = (m: number, t: number, d: number) => d > 0 ? Math.round(((m + t) / (d * 2)) * 100) : 0;
 
+  // Count workdays from day 1 up to today (inclusive) in the current month
+  const workdaysToday = Array.from({ length: today }, (_, i) => i + 1)
+    .filter(d => !isNonWorkday(d, year, month, exceptionalDates)).length;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Top banner (screen only) ── */}
@@ -196,9 +200,9 @@ export default function PublicReportPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {reports.map(r => {
-                  const cumpl = pct(r.diasConManana, r.diasConTarde, today);
+                  const cumpl = pct(r.diasConManana, r.diasConTarde, workdaysToday);
                   const noData = !r.data || (r.diasConManana === 0 && r.diasConTarde === 0);
-                  const pendingDays = today - r.diasConManana;
+                  const pendingDays = workdaysToday - r.diasConManana;
                   return (
                     <tr key={r.termo.id} className="hover:bg-gray-50">
                       <td className="px-3 py-2 font-bold text-teal-900">
