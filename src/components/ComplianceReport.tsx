@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { Termohigrometro, MESES, DailyEntry, RefrigDailyEntry } from '../types';
-import { fsLoadAllRegistros, fsLoadAllLockedDays, LockedDaysData } from '../utils/firestore';
+import { fsLoadAllRegistros, fsLoadAllLockedDays, LockedDaysData, ExceptionalDay } from '../utils/firestore';
 import { Anexo10Data, Anexo11Data } from '../types';
+import { isWorkday } from '../utils/holidays';
 
 interface Props {
   termos: Termohigrometro[];
+  exceptionalDays: ExceptionalDay[];
   onBack: () => void;
 }
 
@@ -18,6 +20,7 @@ interface DayCompliance {
   lockedAt?: number;
   tsManana?: number;
   tsTarde?: number;
+  nonWorkday: boolean;
 }
 
 interface TermoReport {
@@ -49,7 +52,8 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-export default function ComplianceReport({ termos, onBack }: Props) {
+export default function ComplianceReport({ termos, exceptionalDays, onBack }: Props) {
+  const exceptionalDates = exceptionalDays.map(d => d.fecha);
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -101,6 +105,7 @@ export default function ComplianceReport({ termos, onBack }: Props) {
               lockedAt: locked.lockedAt[dia],
               tsManana,
               tsTarde,
+              nonWorkday: !isWorkday(new Date(year, month - 1, dia), exceptionalDates),
             };
           });
 
@@ -129,7 +134,9 @@ export default function ComplianceReport({ termos, onBack }: Props) {
         ['Horario aceptable: Mañana 07:00–10:00 | Tarde 13:00–16:00'],
         [],
         ['DÍA', 'MAÑANA HORA', 'MAÑANA ESTADO', 'TARDE HORA', 'TARDE ESTADO', 'CONFIRMADO'],
-        ...days.map(d => [
+        ...days.map(d => d.nonWorkday ? [
+          d.dia, 'No laborable', 'No obligatorio', 'No laborable', 'No obligatorio', '—',
+        ] : [
           d.dia,
           fmtTime(d.tsManana),
           d.manana === 'ontime' ? 'A tiempo' : d.manana === 'late' ? 'Fuera de horario' : 'No registrado',
@@ -219,10 +226,12 @@ export default function ComplianceReport({ termos, onBack }: Props) {
           <div className="space-y-6">
             {report.map(({ termo, days }) => {
               const shown = days.slice(0, daysToShow);
-              const ontime = shown.filter(d => d.manana === 'ontime' && d.tarde === 'ontime').length;
-              const partial = shown.filter(d => (d.manana !== 'missing' || d.tarde !== 'missing') && !(d.manana === 'ontime' && d.tarde === 'ontime')).length;
-              const missing = shown.filter(d => d.manana === 'missing' && d.tarde === 'missing').length;
-              const pct = shown.length > 0 ? Math.round((ontime / shown.length) * 100) : 0;
+              // Workdays only — weekends and holidays are not obligatory.
+              const workdays = shown.filter(d => !d.nonWorkday);
+              const ontime = workdays.filter(d => d.manana === 'ontime' && d.tarde === 'ontime').length;
+              const partial = workdays.filter(d => (d.manana !== 'missing' || d.tarde !== 'missing') && !(d.manana === 'ontime' && d.tarde === 'ontime')).length;
+              const missing = workdays.filter(d => d.manana === 'missing' && d.tarde === 'missing').length;
+              const pct = workdays.length > 0 ? Math.round((ontime / workdays.length) * 100) : 0;
 
               return (
                 <div key={termo.id} className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
@@ -260,10 +269,22 @@ export default function ComplianceReport({ termos, onBack }: Props) {
                       </thead>
                       <tbody>
                         {shown.map(d => {
+                          const isToday = isCurrentMonth && d.dia === todayDay;
+                          const rowCls = isToday ? 'bg-blue-50 font-semibold' : d.nonWorkday ? 'bg-slate-100' : d.dia % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
+                          if (d.nonWorkday) {
+                            return (
+                              <tr key={d.dia} className={`border-b border-gray-100 ${rowCls}`}>
+                                <td className="px-3 py-1.5 font-bold text-slate-400">
+                                  {d.dia}{isToday && <span className="ml-1 text-blue-500 text-xs">◀ hoy</span>}
+                                </td>
+                                <td colSpan={5} className="px-3 py-1.5 text-center text-slate-400 italic">
+                                  🚫 No laborable (no obligatorio)
+                                </td>
+                              </tr>
+                            );
+                          }
                           const m = statusIcon(d.manana);
                           const t = statusIcon(d.tarde);
-                          const isToday = isCurrentMonth && d.dia === todayDay;
-                          const rowCls = isToday ? 'bg-blue-50 font-semibold' : d.dia % 2 === 0 ? 'bg-gray-50/50' : 'bg-white';
                           return (
                             <tr key={d.dia} className={`border-b border-gray-100 ${rowCls}`}>
                               <td className="px-3 py-1.5 font-bold text-blue-900">

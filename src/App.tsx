@@ -1821,6 +1821,7 @@ export default function App() {
     return (
       <ComplianceReport
         termos={visibleTermos}
+        exceptionalDays={exceptionalDays}
         onBack={() => setShowReport(false)}
       />
     );
