@@ -93,6 +93,18 @@ export interface Calibracion {
   creadoEn: string;
 }
 
+// ─── Limpieza ─────────────────────────────────────────────────────────────────
+
+export interface Limpieza {
+  id: string;
+  termoId: string;
+  fecha: string;           // ISO date YYYY-MM-DD
+  tipo: 'mensual' | 'descongelacion' | 'otro';
+  responsable: string;
+  observaciones: string;
+  creadoEn: string;
+}
+
 // ─── Termohigrómetro model ────────────────────────────────────────────────────
 
 export interface Termohigrometro {

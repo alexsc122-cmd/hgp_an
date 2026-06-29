@@ -6,11 +6,12 @@ interface Props {
   onEdit?: (t: Termohigrometro) => void;
   onDelete?: (id: string) => void;
   onCalibration?: (t: Termohigrometro) => void;
+  onLimpieza?: (t: Termohigrometro) => void;
   todayAlert?: { manana: boolean; tarde: boolean; locked: boolean };
   listMode?: boolean;
 }
 
-export default function TermoCard({ termo, onView, onEdit, onDelete, onCalibration, todayAlert, listMode }: Props) {
+export default function TermoCard({ termo, onView, onEdit, onDelete, onCalibration, onLimpieza, todayAlert, listMode }: Props) {
   const isAmbiental = termo.tipo === 'ambiental';
 
   const handleDelete = () => {
@@ -52,6 +53,12 @@ export default function TermoCard({ termo, onView, onEdit, onDelete, onCalibrati
         <button onClick={() => onCalibration(termo)} title="Historial de calibraciones"
           className="p-2 rounded-lg border border-blue-100 hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors text-base">
           🔧
+        </button>
+      )}
+      {onLimpieza && (
+        <button onClick={() => onLimpieza(termo)} title="Historial de limpiezas"
+          className="p-2 rounded-lg border border-cyan-100 hover:bg-cyan-50 text-cyan-500 hover:text-cyan-700 transition-colors text-base">
+          🧹
         </button>
       )}
       {onEdit && (

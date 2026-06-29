@@ -6,8 +6,8 @@ import {
   Legend, ReferenceLine, ResponsiveContainer,
   Scatter, ScatterChart, ZAxis,
 } from 'recharts';
-import { Termohigrometro, Anexo10Data, Anexo11Data, Calibracion, MESES } from '../types';
-import { fsLoadRegistro, fsGetMonthsWithData, fsLoadCalibraciones } from '../utils/firestore';
+import { Termohigrometro, Anexo10Data, Anexo11Data, Calibracion, Limpieza, MESES } from '../types';
+import { fsLoadRegistro, fsGetMonthsWithData, fsLoadCalibraciones, fsLoadLimpiezas } from '../utils/firestore';
 import { calcProm } from '../utils/calculations';
 
 interface Props {
@@ -46,7 +46,7 @@ interface RangePoint {
 
 export default function ReportesTab({ termos }: Props) {
   const now = new Date();
-  const [mode, setMode] = useState<'mes' | 'rango' | 'calibraciones'>('mes');
+  const [mode, setMode] = useState<'mes' | 'rango' | 'calibraciones' | 'limpiezas'>('mes');
   const [selectedTermoId, setSelectedTermoId] = useState<string>(termos[0]?.id ?? '');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -55,6 +55,7 @@ export default function ReportesTab({ termos }: Props) {
   const [data11, setData11] = useState<Anexo11Data | null>(null);
   const [loading, setLoading] = useState(false);
   const [calibraciones, setCalibraciones] = useState<Calibracion[]>([]);
+  const [limpiezas, setLimpiezas] = useState<Limpieza[]>([]);
 
   // Calibraciones temperature-by-hour state
   const [calibYear, setCalibYear] = useState(now.getFullYear());
@@ -80,10 +81,11 @@ export default function ReportesTab({ termos }: Props) {
       ? `Reporte_${termo?.nombre ?? ''}_${MESES[selectedMonth - 1]}_${selectedYear}`
       : mode === 'rango'
       ? `Reporte_${termo?.nombre ?? ''}_${MESES[rangeFromMonth - 1]}${rangeFromYear}_${MESES[rangeToMonth - 1]}${rangeToYear}`
-      : `Calibraciones_${termo?.nombre ?? ''}`,
+      : mode === 'calibraciones' ? `Calibraciones_${termo?.nombre ?? ''}`
+      : `Limpiezas_${termo?.nombre ?? ''}`,
   });
 
-  // Load months with data and calibraciones when termo changes
+  // Load months with data, calibraciones and limpiezas when termo changes
   useEffect(() => {
     if (!selectedTermoId) return;
     fsGetMonthsWithData(selectedTermoId)
@@ -92,6 +94,12 @@ export default function ReportesTab({ termos }: Props) {
     fsLoadCalibraciones(selectedTermoId)
       .then(setCalibraciones)
       .catch(() => {});
+    fsLoadLimpiezas(selectedTermoId)
+      .then(setLimpiezas)
+      .catch(() => {});
+    // If current mode is limpiezas but new termo is ambiental, switch to mes
+    const t = termos.find(t => t.id === selectedTermoId);
+    if (t?.tipo === 'ambiental' && (mode === 'limpiezas')) setMode('mes');
   }, [selectedTermoId]);
 
   // Load registro data when termo, year, or month changes (mes mode)
@@ -282,6 +290,14 @@ export default function ReportesTab({ termos }: Props) {
               {m === 'mes' ? '📅 Por mes' : m === 'rango' ? '📆 Rango de meses' : '🔬 Calibraciones'}
             </button>
           ))}
+          {termo?.tipo === 'refrigeracion' && (
+            <button
+              onClick={() => setMode('limpiezas')}
+              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${mode === 'limpiezas' ? 'bg-cyan-700 text-white' : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100'}`}
+            >
+              🧹 Limpiezas
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap gap-4 items-end">
           {/* Equipo */}
@@ -773,6 +789,109 @@ export default function ReportesTab({ termos }: Props) {
           </div>
         );
       })()}
+
+      {/* ─── Limpiezas mode ─── */}
+      {mode === 'limpiezas' && termo && (
+        <div ref={printRef} className="space-y-5">
+          {/* Print header */}
+          <div className="print-only">
+            <div style={{ background: 'linear-gradient(90deg, #0f766e, #0d9488)', padding: '14px 20px 10px' }}>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '9px', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase' }}>Clínica Renal El Puyo — VIVENS</div>
+              <div style={{ color: 'white', fontSize: '17px', fontWeight: 800, marginTop: '3px' }}>Historial de Limpiezas — {termo.nombre}</div>
+              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '8px', marginTop: '4px' }}>{termo.numero ? `N° ${termo.numero} · ` : ''}{termo.ubicacion}</div>
+            </div>
+          </div>
+
+          {/* Print button */}
+          <div className="flex justify-end no-print">
+            <button onClick={() => handlePrint()} className="text-xs bg-cyan-700 hover:bg-cyan-800 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">
+              🖨️ Imprimir historial
+            </button>
+          </div>
+
+          {/* Equipo info */}
+          <div className="bg-white rounded-xl border border-cyan-100 shadow-sm p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div><p className="text-xs text-gray-500 font-semibold uppercase">Equipo</p><p className="font-bold text-teal-900 mt-0.5">{termo.nombre}</p></div>
+              <div><p className="text-xs text-gray-500 font-semibold uppercase">N° Serie</p><p className="font-bold text-teal-900 mt-0.5">{termo.numero || '—'}</p></div>
+              <div><p className="text-xs text-gray-500 font-semibold uppercase">Ubicación</p><p className="font-bold text-teal-900 mt-0.5">{termo.ubicacion || '—'}</p></div>
+              <div><p className="text-xs text-gray-500 font-semibold uppercase">Tipo</p><p className="font-bold text-cyan-700 mt-0.5">❄️ Refrigeración</p></div>
+            </div>
+          </div>
+
+          {/* Vigencia + stats */}
+          {(() => {
+            const last = limpiezas[0];
+            const daysSince = last ? Math.floor((Date.now() - new Date(last.fecha).getTime()) / 86400000) : null;
+            const vigBadge = daysSince === null
+              ? { label: 'Sin registros de limpieza', cls: 'bg-gray-100 text-gray-600' }
+              : daysSince > 30
+              ? { label: `⚠ Limpieza vencida (hace ${daysSince} días)`, cls: 'bg-red-100 text-red-700' }
+              : daysSince >= 20
+              ? { label: `⚠ Próxima a vencer (hace ${daysSince} días)`, cls: 'bg-amber-100 text-amber-700' }
+              : { label: `✓ Al día (hace ${daysSince} días)`, cls: 'bg-green-100 text-green-700' };
+            const nextDate = last ? new Date(new Date(last.fecha).getTime() + 30 * 86400000).toLocaleDateString('es-EC') : '—';
+            const fmtF = (iso: string) => { const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; };
+            return (
+              <>
+                <div className={`px-4 py-2 rounded-lg text-sm font-semibold ${vigBadge.cls}`}>{vigBadge.label}</div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Total limpiezas', value: String(limpiezas.length) },
+                    { label: 'Última limpieza', value: last ? fmtF(last.fecha) : '—' },
+                    { label: 'Próxima programada', value: nextDate },
+                  ].map(s => (
+                    <div key={s.label} className="bg-white rounded-xl border border-cyan-100 shadow-sm p-4">
+                      <p className="text-xs text-gray-500 font-semibold mb-1">{s.label}</p>
+                      <p className="text-xl font-bold text-cyan-800">{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+
+          {/* History table */}
+          <div className="bg-white rounded-xl border border-cyan-100 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-cyan-50">
+              <h3 className="text-sm font-bold text-cyan-900">Historial de Limpiezas</h3>
+            </div>
+            {limpiezas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="text-3xl mb-2">🧹</div>
+                <p className="font-semibold text-gray-500">Sin registros de limpieza</p>
+                <p className="text-xs mt-1">Registra limpiezas desde la tarjeta del equipo</p>
+              </div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="bg-cyan-50 text-cyan-900 font-semibold">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Fecha</th>
+                    <th className="px-3 py-2 text-left">Tipo</th>
+                    <th className="px-3 py-2 text-left">Responsable</th>
+                    <th className="px-3 py-2 text-left">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {limpiezas.map(l => {
+                    const [y,m,d] = l.fecha.split('-');
+                    const tipoCls = l.tipo === 'mensual' ? 'bg-blue-100 text-blue-800' : l.tipo === 'descongelacion' ? 'bg-cyan-100 text-cyan-800' : 'bg-gray-100 text-gray-700';
+                    const tipoLabel = l.tipo === 'mensual' ? 'Mensual Profunda' : l.tipo === 'descongelacion' ? 'Descongelación' : 'Otro';
+                    return (
+                      <tr key={l.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-1.5 font-semibold text-gray-700">{d}/{m}/{y}</td>
+                        <td className="px-3 py-1.5"><span className={`px-2 py-0.5 rounded-full font-semibold ${tipoCls}`}>{tipoLabel}</span></td>
+                        <td className="px-3 py-1.5 text-gray-600">{l.responsable}</td>
+                        <td className="px-3 py-1.5 text-gray-400">{l.observaciones || '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
       {mode === 'mes' && (loading ? (
         <div className="flex items-center justify-center py-20">

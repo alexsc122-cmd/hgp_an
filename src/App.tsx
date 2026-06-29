@@ -34,6 +34,7 @@ import PrintHeader from './components/PrintHeader';
 import VerificationPage from './components/VerificationPage';
 import ComplianceReport from './components/ComplianceReport';
 import CalibrationHistory from './components/CalibrationHistory';
+import LimpiezaHistory from './components/LimpiezaHistory';
 import PublicReportPage from './components/PublicReportPage';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -582,6 +583,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<Usuario | null>(null);
   const [calibrationTermo, setCalibrationTermo] = useState<Termohigrometro | null>(null);
+  const [limpiezaTermo, setLimpiezaTermo] = useState<Termohigrometro | null>(null);
   const isAdmin = currentUser.rol === 'admin';
 
   const pendingCount = (() => {
@@ -911,6 +913,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
                       onEdit={isAdmin ? onEdit : undefined}
                       onDelete={isAdmin ? onDelete : undefined}
                       onCalibration={setCalibrationTermo}
+                      onLimpieza={t.tipo === 'refrigeracion' ? setLimpiezaTermo : undefined}
                       todayAlert={todayStatus[t.id]}
                       listMode={viewMode === 'list'}
                     />
@@ -992,6 +995,13 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
           termo={calibrationTermo}
           isAdmin={isAdmin}
           onClose={() => setCalibrationTermo(null)}
+        />
+      )}
+      {limpiezaTermo && (
+        <LimpiezaHistory
+          termo={limpiezaTermo}
+          isAdmin={isAdmin}
+          onClose={() => setLimpiezaTermo(null)}
         />
       )}
     </div>

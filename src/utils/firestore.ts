@@ -13,7 +13,7 @@ import {
   reauthenticateWithCredential,
 } from 'firebase/auth';
 import { db, auth } from '../firebase';
-import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data, Calibracion } from '../types';
+import { Termohigrometro, Usuario, Anexo10Data, Anexo11Data, Calibracion, Limpieza } from '../types';
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
@@ -209,6 +209,22 @@ export async function fsSavecalibracion(c: Calibracion): Promise<void> {
 
 export async function fsDeleteCalibracion(id: string): Promise<void> {
   await deleteDoc(doc(db, 'calibraciones', id));
+}
+
+// ─── Limpiezas ────────────────────────────────────────────────────────────────
+
+export async function fsLoadLimpiezas(termoId: string): Promise<Limpieza[]> {
+  const q = query(collection(db, 'limpiezas'), where('termoId', '==', termoId), orderBy('fecha', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as Limpieza);
+}
+
+export async function fsSaveLimpieza(l: Limpieza): Promise<void> {
+  await setDoc(doc(db, 'limpiezas', l.id), l);
+}
+
+export async function fsDeleteLimpieza(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'limpiezas', id));
 }
 
 // ─── Public verification helpers (Firestore rules must allow public read) ─────
