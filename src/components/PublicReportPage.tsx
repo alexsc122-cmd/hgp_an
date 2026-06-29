@@ -4,11 +4,18 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 import { Termohigrometro, Anexo10Data, Anexo11Data, DailyEntry, RefrigDailyEntry, MESES } from '../types';
-import { fsLoadTermos, fsLoadRegistro } from '../utils/firestore';
+import { fsLoadTermos, fsLoadRegistro, fsLoadExceptionalDays, ExceptionalDay } from '../utils/firestore';
 import { calcProm } from '../utils/calculations';
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
+}
+
+function isNonWorkday(dia: number, year: number, month: number, exceptionalDates: Set<string>): boolean {
+  const dow = new Date(year, month - 1, dia).getDay();
+  if (dow === 0 || dow === 6) return true;
+  const iso = `${year}-${String(month).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  return exceptionalDates.has(iso);
 }
 
 interface TermoReport {
@@ -31,18 +38,25 @@ interface DayRow {
 function buildDayRows(
   entries: (DailyEntry | RefrigDailyEntry)[],
   today: number,
-  totalDays: number
+  totalDays: number,
+  year: number,
+  month: number,
+  exceptionalDates: Set<string>
 ): DayRow[] {
   const rows: DayRow[] = [];
   let emptyStart: number | null = null;
 
   const flush = (upTo: number) => {
     if (emptyStart === null) return;
-    const count = upTo - emptyStart;
-    if (count === 1) {
-      rows.push({ type: 'empty-single', day: emptyStart });
-    } else if (count > 1) {
-      rows.push({ type: 'empty-range', from: emptyStart, to: upTo - 1 });
+    // collect only workdays in this range
+    const workdays: number[] = [];
+    for (let d = emptyStart; d < upTo; d++) {
+      if (!isNonWorkday(d, year, month, exceptionalDates)) workdays.push(d);
+    }
+    if (workdays.length === 1) {
+      rows.push({ type: 'empty-single', day: workdays[0] });
+    } else if (workdays.length > 1) {
+      rows.push({ type: 'empty-range', from: workdays[0], to: workdays[workdays.length - 1] });
     }
     emptyStart = null;
   };
@@ -50,9 +64,13 @@ function buildDayRows(
   for (let d = 1; d <= Math.min(today, totalDays); d++) {
     const entry = entries.find(e => e.dia === d);
     const hasData = entry && (entry.tempManana || entry.tempTarde);
+    const nonWork = isNonWorkday(d, year, month, exceptionalDates);
     if (hasData) {
       flush(d);
       rows.push({ type: 'data', day: d, entry });
+    } else if (nonWork) {
+      // non-workday with no data: flush pending workdays first, then skip this day
+      flush(d);
     } else {
       if (emptyStart === null) emptyStart = d;
     }
@@ -71,6 +89,7 @@ export default function PublicReportPage() {
   const [reports, setReports] = useState<TermoReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadedAt, setLoadedAt] = useState('');
+  const [exceptionalDates, setExceptionalDates] = useState<Set<string>>(new Set());
 
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -80,6 +99,9 @@ export default function PublicReportPage() {
 
   useEffect(() => {
     let cancelled = false;
+    fsLoadExceptionalDays().then((days: ExceptionalDay[]) => {
+      if (!cancelled) setExceptionalDates(new Set(days.map(d => d.fecha)));
+    }).catch(() => {});
     fsLoadTermos().then(async termos => {
       if (cancelled) return;
       const results = await Promise.all(termos.map(async termo => {
@@ -243,12 +265,15 @@ export default function PublicReportPage() {
                 }))
               : [];
 
-            const dayRows = buildDayRows(entries, today, totalDays);
+            const dayRows = buildDayRows(entries, today, totalDays, year, month, exceptionalDates);
 
             const StatusBadge = ({ entry, day }: { entry?: DailyEntry | RefrigDailyEntry; day: number }) => {
               if (day > today) return <span className="text-gray-300 text-xs">—</span>;
-              if (!entry || (!entry.tempManana && !entry.tempTarde))
+              if (!entry || (!entry.tempManana && !entry.tempTarde)) {
+                if (isNonWorkday(day, year, month, exceptionalDates))
+                  return <span className="inline-flex items-center gap-0.5 bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-xs font-semibold">🗓 No lab.</span>;
                 return <span className="inline-flex items-center gap-0.5 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-xs font-semibold">⚠ Pendiente</span>;
+              }
               if (!entry.tempManana || !entry.tempTarde)
                 return <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full text-xs font-semibold">⚠ Incompleto</span>;
               const v1 = parseFloat(entry.tempManana), v2 = parseFloat(entry.tempTarde);
@@ -349,9 +374,9 @@ export default function PublicReportPage() {
                             if (row.type === 'empty-range') {
                               return (
                                 <tr key={i} className="bg-red-50">
-                                  <td className="px-3 py-1.5 font-semibold text-gray-500">{row.from} – {row.to}</td>
+                                  <td className="px-3 py-1.5 font-semibold text-gray-500">Días {row.from}–{row.to}</td>
                                   <td colSpan={isAmbiental ? 3 : 2} className="px-3 py-1.5 text-gray-400 italic text-xs">
-                                    {(row.to! - row.from! + 1)} días sin registro
+                                    Días laborables sin registro
                                   </td>
                                   <td className="px-3 py-1.5 text-center">
                                     <span className="inline-flex items-center gap-0.5 bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full text-xs font-semibold">⚠ Pendiente</span>
