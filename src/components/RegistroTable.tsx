@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { DailyEntry, RefrigDailyEntry } from '../types';
 import {
   calcProm,
@@ -116,6 +117,11 @@ function rowAlert(e: DailyEntry): boolean {
 }
 
 export function Anexo10Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated, exceptionalDays = [] }: Anexo10TableProps) {
+  const now = new Date();
+  const todayDay = (year === now.getFullYear() && month === now.getMonth() + 1) ? now.getDate() : null;
+  const todayRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, []);
+
   const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
   const isoDate = (dia: number) => `${year}-${String(month).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
   const isExceptional = (dia: number) => exceptionalDays.includes(isoDate(dia));
@@ -174,9 +180,10 @@ export function Anexo10Table({ entries, onChange, footer, onFooterChange, locked
           const alert = rowAlert(e);
           const weekend = isWeekend(e.dia);
           const label = dayLabel(e.dia);
+          const isToday = e.dia === todayDay;
           const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : weekend ? 'bg-slate-100 border-slate-200' : 'bg-white border-teal-100';
           return (
-            <div key={e.dia} className={`rounded-xl border ${cardBg} overflow-hidden`}>
+            <div key={e.dia} ref={isToday ? todayRef : undefined} className={`rounded-xl border ${cardBg} overflow-hidden`}>
               {/* Day header */}
               <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : weekend ? 'bg-slate-200' : 'bg-teal-50'}`}>
                 <span className={`font-bold text-base ${weekend ? 'text-slate-500' : 'text-teal-900'}`}>
@@ -393,6 +400,11 @@ function rowAlert11(e: RefrigDailyEntry): boolean {
 }
 
 export function Anexo11Table({ entries, onChange, footer, onFooterChange, lockedDays, onLockedDaysChange, currentUserName, canUnlock, year, month, validated, exceptionalDays = [] }: Anexo11TableProps) {
+  const now = new Date();
+  const todayDay = (year === now.getFullYear() && month === now.getMonth() + 1) ? now.getDate() : null;
+  const todayRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { todayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, []);
+
   const isWeekend = (dia: number) => { const d = new Date(year, month - 1, dia).getDay(); return d === 0 || d === 6; };
   const isoDate = (dia: number) => `${year}-${String(month).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
   const isExceptional = (dia: number) => exceptionalDays.includes(isoDate(dia));
@@ -444,9 +456,10 @@ export function Anexo11Table({ entries, onChange, footer, onFooterChange, locked
           const alert = rowAlert11(e);
           const weekend = isWeekend(e.dia);
           const label = dayLabel(e.dia);
+          const isToday = e.dia === todayDay;
           const cardBg = locked ? 'bg-gray-50 border-gray-200' : alert ? 'bg-red-50 border-red-300' : weekend ? 'bg-slate-100 border-slate-200' : 'bg-white border-teal-100';
           return (
-            <div key={e.dia} className={`rounded-xl border ${cardBg} overflow-hidden`}>
+            <div key={e.dia} ref={isToday ? todayRef : undefined} className={`rounded-xl border ${cardBg} overflow-hidden`}>
               <div className={`flex items-center justify-between px-4 py-2 ${locked ? 'bg-gray-100' : alert ? 'bg-red-100' : weekend ? 'bg-slate-200' : 'bg-teal-50'}`}>
                 <span className={`font-bold text-base ${weekend ? 'text-slate-500' : 'text-teal-900'}`}>
                   Día {e.dia}{label && <span className="ml-1.5 text-xs font-semibold uppercase tracking-wide opacity-70">{label}</span>}

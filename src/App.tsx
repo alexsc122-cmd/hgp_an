@@ -1604,6 +1604,14 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
           )}
         </main>
       </div>
+      {/* Floating scroll-to-top button — mobile only */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="md:hidden fixed bottom-6 right-4 z-50 bg-blue-900 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg text-xl active:bg-blue-700 no-print"
+        aria-label="Ir al inicio"
+      >
+        ↑
+      </button>
     </div>
   );
 }
