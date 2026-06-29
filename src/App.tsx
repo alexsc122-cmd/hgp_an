@@ -1142,7 +1142,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
           fsLoadRegistro(termo.id, currentYear, currentMonthNum),
           fsLoadLockedDays(termo.id, currentYear, currentMonthNum),
           fsGetMonthsWithData(termo.id),
-          fsLoadUsuarios(),
+          fsLoadUsuarios().catch(() => [] as import('./types').Usuario[]),
         ]);
         // resolve cargo by matching the responsible name against the user list
         const resolveFooter = (saved: { revisadoPor: string; cargo: string; fecha: string } | undefined, fallbackName: string) => {
