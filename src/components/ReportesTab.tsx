@@ -83,6 +83,25 @@ export default function ReportesTab({ termos }: Props) {
       ? `Reporte_${termo?.nombre ?? ''}_${MESES[rangeFromMonth - 1]}${rangeFromYear}_${MESES[rangeToMonth - 1]}${rangeToYear}`
       : mode === 'calibraciones' ? `Calibraciones_${termo?.nombre ?? ''}`
       : `Limpiezas_${termo?.nombre ?? ''}`,
+    pageStyle: (mode === 'limpiezas' || mode === 'calibraciones') ? `
+      @page { size: A4 portrait; margin: 12mm 14mm; }
+      body { font-family: Arial, sans-serif; font-size: 10px; color: #111; background: white !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .space-y-5 > * + * { margin-top: 12px; }
+      .rounded-xl { border-radius: 6px; }
+      .overflow-hidden { overflow: visible !important; }
+      .grid { display: grid; }
+      .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+      .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+      .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+      .gap-3 { gap: 8px; }
+      .gap-4 { gap: 10px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ccc; padding: 5px 8px; font-size: 9px; }
+      th { background: #f0fdfa !important; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    ` : undefined,
   });
 
   // Load months with data, calibraciones and limpiezas when termo changes
