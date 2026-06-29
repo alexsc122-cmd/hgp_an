@@ -99,10 +99,15 @@ export default function PublicReportPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fsLoadExceptionalDays().then((days: ExceptionalDay[]) => {
-      if (!cancelled) setExceptionalDates(new Set(days.map(d => d.fecha)));
-    }).catch(() => {});
-    fsLoadTermos().then(async termos => {
+    (async () => {
+      let excDates: Set<string> = new Set();
+      try {
+        const days = await fsLoadExceptionalDays();
+        excDates = new Set(days.map((d: ExceptionalDay) => d.fecha));
+        if (!cancelled) setExceptionalDates(excDates);
+      } catch { /**/ }
+
+      const termos = await fsLoadTermos().catch(() => []);
       if (cancelled) return;
       const results = await Promise.all(termos.map(async termo => {
         const isAmbiental = termo.tipo === 'ambiental';
@@ -115,8 +120,9 @@ export default function PublicReportPage() {
 
         let diasConManana = 0, diasConTarde = 0, outOfRange = 0;
         entries.forEach(e => {
-          if (e.tempManana) { diasConManana++; const v = parseFloat(e.tempManana); if (isAmbiental ? v > 30 : (v > 8 || v < 2)) outOfRange++; }
-          if (e.tempTarde)  { diasConTarde++;  const v = parseFloat(e.tempTarde);  if (isAmbiental ? v > 30 : (v > 8 || v < 2)) outOfRange++; }
+          const workday = !isNonWorkday(e.dia, year, month, excDates);
+          if (e.tempManana) { if (workday) diasConManana++; const v = parseFloat(e.tempManana); if (isAmbiental ? v > 30 : (v > 8 || v < 2)) outOfRange++; }
+          if (e.tempTarde)  { if (workday) diasConTarde++;  const v = parseFloat(e.tempTarde);  if (isAmbiental ? v > 30 : (v > 8 || v < 2)) outOfRange++; }
         });
         return { termo, data, diasConManana, diasConTarde, outOfRange } as TermoReport;
       }));
@@ -126,7 +132,7 @@ export default function PublicReportPage() {
         setLoadedAt(`${String(t.getDate()).padStart(2,'0')}/${String(t.getMonth()+1).padStart(2,'0')}/${t.getFullYear()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`);
         setLoading(false);
       }
-    }).catch(() => { if (!cancelled) setLoading(false); });
+    })().catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
