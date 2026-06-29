@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ReferenceLine, ResponsiveContainer,
+  Scatter, ScatterChart, ZAxis,
 } from 'recharts';
 import { Termohigrometro, Anexo10Data, Anexo11Data, Calibracion, MESES } from '../types';
 import { fsLoadRegistro, fsGetMonthsWithData, fsLoadCalibraciones } from '../utils/firestore';
@@ -55,6 +56,12 @@ export default function ReportesTab({ termos }: Props) {
   const [loading, setLoading] = useState(false);
   const [calibraciones, setCalibraciones] = useState<Calibracion[]>([]);
 
+  // Calibraciones temperature-by-hour state
+  const [calibYear, setCalibYear] = useState(now.getFullYear());
+  const [calibMonth, setCalibMonth] = useState(now.getMonth() + 1);
+  const [calibData, setCalibData] = useState<Anexo10Data | Anexo11Data | null>(null);
+  const [calibLoading, setCalibLoading] = useState(false);
+
   // Rango state
   const [rangeFromYear, setRangeFromYear] = useState(now.getFullYear());
   const [rangeFromMonth, setRangeFromMonth] = useState(1);
@@ -104,6 +111,19 @@ export default function ReportesTab({ termos }: Props) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [selectedTermoId, selectedYear, selectedMonth, isAmbiental, mode]);
+
+  // Load registro for calibraciones temperature-by-hour analysis
+  useEffect(() => {
+    if (!selectedTermoId || mode !== 'calibraciones') return;
+    let cancelled = false;
+    setCalibLoading(true);
+    setCalibData(null);
+    fsLoadRegistro(selectedTermoId, calibYear, calibMonth)
+      .then(r => { if (!cancelled) setCalibData(r); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setCalibLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedTermoId, calibYear, calibMonth, mode]);
 
   // Load range data
   useEffect(() => {
@@ -601,6 +621,155 @@ export default function ReportesTab({ termos }: Props) {
                 </div>
               </div>
             )}
+
+            {/* ─── Temperature vs time-of-day analysis ─── */}
+            {(() => {
+              interface HourPoint {
+                horaDecimal: number;
+                horaLabel: string;
+                temp: number;
+                turno: 'Mañana' | 'Tarde';
+                dia: number;
+              }
+
+              const entries = calibData
+                ? (isAmbiental
+                    ? (calibData as Anexo10Data).entries
+                    : (calibData as Anexo11Data).entries)
+                : [];
+
+              const hourPoints: HourPoint[] = [];
+              for (const e of entries) {
+                if (e.tsManana && e.tempManana) {
+                  const d = new Date(e.tsManana);
+                  const horaDecimal = d.getHours() + d.getMinutes() / 60;
+                  const hh = String(d.getHours()).padStart(2, '0');
+                  const mm = String(d.getMinutes()).padStart(2, '0');
+                  hourPoints.push({ horaDecimal, horaLabel: `${hh}:${mm}`, temp: parseFloat(e.tempManana), turno: 'Mañana', dia: e.dia });
+                }
+                if (e.tsTarde && e.tempTarde) {
+                  const d = new Date(e.tsTarde);
+                  const horaDecimal = d.getHours() + d.getMinutes() / 60;
+                  const hh = String(d.getHours()).padStart(2, '0');
+                  const mm = String(d.getMinutes()).padStart(2, '0');
+                  hourPoints.push({ horaDecimal, horaLabel: `${hh}:${mm}`, temp: parseFloat(e.tempTarde), turno: 'Tarde', dia: e.dia });
+                }
+              }
+              hourPoints.sort((a, b) => a.horaDecimal - b.horaDecimal);
+
+              const mananaPoints = hourPoints.filter(p => p.turno === 'Mañana');
+              const tardePoints = hourPoints.filter(p => p.turno === 'Tarde');
+
+              const avgHora = (pts: HourPoint[]) => {
+                if (pts.length === 0) return null;
+                const avg = pts.reduce((s, p) => s + p.horaDecimal, 0) / pts.length;
+                const hh = String(Math.floor(avg)).padStart(2, '0');
+                const mm = String(Math.round((avg % 1) * 60)).padStart(2, '0');
+                return `${hh}:${mm}`;
+              };
+
+              const allTemps = hourPoints.map(p => p.temp);
+              const deltaTemp = allTemps.length >= 2
+                ? `${(Math.max(...allTemps) - Math.min(...allTemps)).toFixed(1)}°C`
+                : '—';
+
+              return (
+                <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-sm font-bold text-blue-900">
+                      🕐 Distribución Horaria de Lecturas — {MESES[calibMonth - 1]} {calibYear}
+                    </h3>
+                    <div className="flex gap-2 items-center">
+                      <label className="text-xs font-semibold text-gray-500">Período analizado</label>
+                      <select
+                        value={calibMonth}
+                        onChange={e => setCalibMonth(parseInt(e.target.value))}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      >
+                        {MESES.map((m, i) => {
+                          const hasD = monthsWithData.some(d => d.year === calibYear && d.month === i + 1);
+                          return <option key={i + 1} value={i + 1}>{m}{hasD ? ' ●' : ''}</option>;
+                        })}
+                      </select>
+                      <select
+                        value={calibYear}
+                        onChange={e => setCalibYear(parseInt(e.target.value))}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      >
+                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  {calibLoading ? (
+                    <p className="text-xs text-blue-600 py-4 text-center">Cargando...</p>
+                  ) : hourPoints.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-4 text-center">Sin datos con timestamp para este período</p>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <ScatterChart margin={{ top: 8, right: 24, left: 0, bottom: 16 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+                          <XAxis
+                            type="number"
+                            dataKey="horaDecimal"
+                            domain={[0, 24]}
+                            ticks={[6, 8, 10, 12, 14, 16, 18, 20]}
+                            tick={{ fontSize: 11 }}
+                            label={{ value: 'Hora del día', position: 'insideBottomRight', offset: -4, fontSize: 11 }}
+                          />
+                          <YAxis
+                            type="number"
+                            dataKey="temp"
+                            unit="°C"
+                            tick={{ fontSize: 11 }}
+                            domain={['auto', 'auto']}
+                          />
+                          <ZAxis range={[40, 40]} />
+                          <Tooltip
+                            cursor={{ strokeDasharray: '3 3' }}
+                            content={({ payload }) => {
+                              if (!payload || payload.length === 0) return null;
+                              const p = payload[0].payload as HourPoint;
+                              return (
+                                <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs shadow">
+                                  Día {p.dia} — {p.horaLabel} — {p.temp}°C
+                                </div>
+                              );
+                            }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          {isAmbiental
+                            ? <ReferenceLine y={30} stroke="#ef4444" strokeDasharray="5 3" label={{ value: 'Límite 30°C', fill: '#ef4444', fontSize: 10 }} />
+                            : <>
+                                <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="5 3" label={{ value: 'Máx 8°C', fill: '#ef4444', fontSize: 10 }} />
+                                <ReferenceLine y={2} stroke="#f97316" strokeDasharray="5 3" label={{ value: 'Mín 2°C', fill: '#f97316', fontSize: 10 }} />
+                              </>
+                          }
+                          <Scatter name="Mañana" data={mananaPoints} fill="#3b82f6" />
+                          <Scatter name="Tarde" data={tardePoints} fill="#f59e0b" />
+                        </ScatterChart>
+                      </ResponsiveContainer>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-gray-500 mb-1">Hora promedio Mañana</p>
+                          <p className="text-xl font-bold text-blue-800">{avgHora(mananaPoints) ?? '—'}</p>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-gray-500 mb-1">Hora promedio Tarde</p>
+                          <p className="text-xl font-bold text-amber-700">{avgHora(tardePoints) ?? '—'}</p>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                          <p className="text-xs font-semibold text-gray-500 mb-1">Δ temperatura</p>
+                          <p className="text-xl font-bold text-gray-800">{deltaTemp}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
