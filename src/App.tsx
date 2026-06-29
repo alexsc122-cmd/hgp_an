@@ -1105,6 +1105,11 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
   // Tracks whether locked days were successfully loaded — prevents a failed
   // load (which leaves lockedDays as empty Set) from overwriting Firestore.
   const lockedDaysReady = useRef(false);
+  // Tracks whether the registro data was successfully loaded from Firestore.
+  // Critical safety guard: if the initial load fails, the in-memory state is
+  // still the EMPTY default. Without this gate the debounced auto-save would
+  // write those empty entries back to Firestore and wipe a whole month of data.
+  const dataReady = useRef(false);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -1137,6 +1142,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
     let cancelled = false;
     async function load() {
       setLoading(true);
+      dataReady.current = false;
       try {
         const [registro, locked, mwd, allUsers] = await Promise.all([
           fsLoadRegistro(termo.id, currentYear, currentMonthNum),
@@ -1199,9 +1205,12 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
           setValidacion(base?.validacion ?? null);
         }
         lockedDaysReady.current = true;
+        dataReady.current = true;
         setMonthsWithData(mwd);
       } catch {
-        if (!cancelled) alert('Error al cargar datos. Verifica tu conexión.');
+        // Keep dataReady false so the auto-save effects below stay disabled and
+        // cannot overwrite existing Firestore data with the empty default state.
+        if (!cancelled) alert('Error al cargar datos. No se guardará nada hasta recargar. Verifica tu conexión.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1230,7 +1239,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
   const debouncedAnexo11 = useDebounce(anexo11, 800);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !dataReady.current) return;
     const y = parseInt(debouncedAnexo10.header.anio);
     const m = parseInt(debouncedAnexo10.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
@@ -1241,7 +1250,7 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
   }, [debouncedAnexo10, termo.id, loading]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !dataReady.current) return;
     const y = parseInt(debouncedAnexo11.header.anio);
     const m = parseInt(debouncedAnexo11.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
