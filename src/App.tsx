@@ -10,7 +10,7 @@ import {
 import {
   fsLoadTermos, fsSaveTermo, fsDeleteTermo,
   fsLoadUsuarios, fsSaveUsuario, fsDeleteUsuario,
-  fsLoadRegistro, fsSaveRegistro,
+  fsLoadRegistro, fsSaveRegistro, fsBackupRegistro, fsLoadBackup,
   fsLoadLockedDays, fsSaveLockedDays,
   fsGetMonthsWithData,
   fsLoadUbicaciones, fsSaveUbicacion, fsDeleteUbicacion, fsRenameUbicacion,
@@ -1057,6 +1057,9 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
   const [loadedKey11, setLoadedKey11] = useState(`${currentYear}-${String(currentMonthNum).padStart(2, '0')}`);
   const [validacion, setValidacion] = useState<MesValidacion | null>(null);
   const [validating, setValidating] = useState(false);
+  // Set when a backup with MORE data than the live record exists for this month
+  // (i.e. the live data may have been wiped). Offers a one-click restore.
+  const [recoverable, setRecoverable] = useState<{ data: Anexo10Data | Anexo11Data; dias: number } | null>(null);
 
   const canValidate = currentUser.rol === 'admin' || currentUser.rol === 'validador';
   const activeData = isAmbiental ? anexo10 : anexo11;
@@ -1099,6 +1102,20 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
       else setAnexo11(updated as Anexo11Data);
       setValidacion(null);
     } catch { alert('Error al revertir la validación.'); }
+  };
+
+  const handleRestaurar = async () => {
+    if (!recoverable) return;
+    if (!window.confirm(`Se restaurarán ${recoverable.dias} días desde el respaldo. Los datos actuales del mes se reemplazarán. ¿Continuar?`)) return;
+    try {
+      const restored = recoverable.data;
+      await fsSaveRegistro(termo.id, currentYear, currentMonthNum, restored);
+      if (isAmbiental) setAnexo10(restored as Anexo10Data);
+      else setAnexo11(restored as Anexo11Data);
+      setValidacion((restored as Anexo10Data | Anexo11Data).validacion ?? null);
+      setRecoverable(null);
+      alert('Datos restaurados desde el respaldo.');
+    } catch { alert('Error al restaurar el respaldo.'); }
   };
 
   const printRef = useRef<HTMLDivElement>(null);
@@ -1207,6 +1224,17 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
         lockedDaysReady.current = true;
         dataReady.current = true;
         setMonthsWithData(mwd);
+
+        // Safety net: if a backup with more filled days than the live record
+        // exists, offer to restore it (covers an accidental data wipe).
+        const countDias = (entries: { tempManana?: string; tempTarde?: string; humManana?: string; humTarde?: string }[] | undefined) =>
+          (entries ?? []).filter(e => (e.tempManana || e.tempTarde || e.humManana || e.humTarde || '').toString().trim() !== '').length;
+        const liveDias = countDias((registro as Anexo10Data | Anexo11Data | null)?.entries);
+        fsLoadBackup(termo.id, currentYear, currentMonthNum).then(bk => {
+          if (cancelled || !bk) return;
+          const bkDias = countDias(bk.entries);
+          if (bkDias > liveDias) setRecoverable({ data: bk, dias: bkDias });
+        }).catch(() => {});
       } catch {
         // Keep dataReady false so the auto-save effects below stay disabled and
         // cannot overwrite existing Firestore data with the empty default state.
@@ -1243,7 +1271,9 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
     const y = parseInt(debouncedAnexo10.header.anio);
     const m = parseInt(debouncedAnexo10.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
-      fsSaveRegistro(termo.id, y, m, debouncedAnexo10).catch(() => {
+      fsSaveRegistro(termo.id, y, m, debouncedAnexo10).then(() => {
+        fsBackupRegistro(termo.id, y, m, debouncedAnexo10).catch(() => {});
+      }).catch(() => {
         alert('Error al guardar datos de Anexo 10.');
       });
     }
@@ -1254,7 +1284,9 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
     const y = parseInt(debouncedAnexo11.header.anio);
     const m = parseInt(debouncedAnexo11.header.mes);
     if (!isNaN(y) && !isNaN(m)) {
-      fsSaveRegistro(termo.id, y, m, debouncedAnexo11).catch(() => {
+      fsSaveRegistro(termo.id, y, m, debouncedAnexo11).then(() => {
+        fsBackupRegistro(termo.id, y, m, debouncedAnexo11).catch(() => {});
+      }).catch(() => {
         alert('Error al guardar datos de Anexo 11.');
       });
     }
@@ -1498,6 +1530,21 @@ function RegistroScreen({ termo, currentUser, config, onBack, exceptionalDays }:
             </div>
           ) : (
             <>
+              {/* Backup recovery banner — shown when a fuller backup exists */}
+              {recoverable && (
+                <div className="mb-4 flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 no-print">
+                  <span className="text-amber-600 text-xl">🛟</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800">Hay un respaldo con más datos</p>
+                    <p className="text-xs text-amber-700">
+                      El respaldo de este mes tiene <strong>{recoverable.dias} días</strong> con registros. Puedes restaurarlo si los datos actuales se perdieron.
+                    </p>
+                  </div>
+                  <button onClick={handleRestaurar} className="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-semibold shrink-0">Restaurar</button>
+                  <button onClick={() => setRecoverable(null)} className="text-xs text-amber-700 hover:text-amber-900 font-semibold shrink-0">Descartar</button>
+                </div>
+              )}
+
               {/* Validation banner */}
               {validacion && (
                 <div className="mb-4 flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 no-print">

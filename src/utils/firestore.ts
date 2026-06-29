@@ -138,6 +138,39 @@ export async function fsSaveRegistro(termoId: string, year: number, month: numbe
   await setDoc(doc(db, 'registros', id), { ...data, termoId, year, month });
 }
 
+// Counts how many data cells are filled across all daily entries. Used to
+// decide whether an incoming version is "more complete" than a stored backup.
+function filledCellCount(data: Anexo10Data | Anexo11Data): number {
+  const fields = ['tempManana', 'tempTarde', 'humManana', 'humTarde', 'nombre', 'observaciones'];
+  let n = 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ((data.entries ?? []) as any[]).forEach((e: Record<string, unknown>) => {
+    fields.forEach(f => { const v = e[f]; if (typeof v === 'string' && v.trim() !== '') n++; });
+  });
+  return n;
+}
+
+// High-water-mark backup: writes a copy of the registro to the `backups`
+// collection, but ONLY if the incoming version has at least as many filled
+// cells as the stored backup. This guarantees a backup can never lose data —
+// an accidental empty/partial save will never overwrite a fuller copy.
+export async function fsBackupRegistro(termoId: string, year: number, month: number, data: Anexo10Data | Anexo11Data): Promise<void> {
+  const id = registroId(termoId, year, month);
+  const incoming = filledCellCount(data);
+  if (incoming === 0) return; // never back up an empty doc
+  const ref = doc(db, 'backups', id);
+  const existing = await getDoc(ref);
+  if (existing.exists() && (existing.data().filledCount as number ?? 0) > incoming) return;
+  await setDoc(ref, { ...data, termoId, year, month, filledCount: incoming, backedUpAt: Date.now() });
+}
+
+export async function fsLoadBackup(termoId: string, year: number, month: number): Promise<Anexo10Data | Anexo11Data | null> {
+  const id = registroId(termoId, year, month);
+  const snap = await getDoc(doc(db, 'backups', id));
+  if (!snap.exists()) return null;
+  return snap.data() as Anexo10Data | Anexo11Data;
+}
+
 export async function fsGetMonthsWithData(termoId: string): Promise<{ year: number; month: number }[]> {
   const q = query(collection(db, 'registros'), where('termoId', '==', termoId));
   const snap = await getDocs(q);
