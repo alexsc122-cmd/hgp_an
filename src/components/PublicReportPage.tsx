@@ -466,11 +466,25 @@ export default function PublicReportPage() {
           Documento generado automáticamente el {loadedAt} · Solo para uso de organismos de control · Clínica Renal El Puyo — VIVENS
         </div>
       </div>
-      {/* Mobile floating print button — uses window.print() so page CSS applies correctly */}
-      <div className="sm:hidden no-print fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-lg z-50">
-        <button onClick={() => window.print()}
-          className="w-full bg-teal-700 text-white text-sm font-bold py-3 rounded-xl flex items-center justify-center gap-2">
-          🖨️ Imprimir / Guardar PDF
+      {/* Mobile floating bar */}
+      <div className="sm:hidden no-print fixed bottom-0 left-0 right-0 p-3 bg-white border-t border-gray-200 shadow-lg z-50 flex gap-2">
+        <button
+          onClick={async () => {
+            const url = window.location.href;
+            if (navigator.share) {
+              await navigator.share({ title: `Reporte VIVENS — ${mesLabel}`, url });
+            } else {
+              await navigator.clipboard.writeText(url);
+              alert('Enlace copiado. Pégalo en tu navegador para imprimir.');
+            }
+          }}
+          className="flex-1 bg-teal-700 text-white text-sm font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+          📤 Compartir / Guardar PDF
+        </button>
+        <button
+          onClick={() => window.print()}
+          className="bg-gray-100 text-gray-700 text-sm font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-1">
+          🖨️
         </button>
       </div>
     </div>
