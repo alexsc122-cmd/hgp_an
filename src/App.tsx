@@ -586,6 +586,7 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const [limpiezaTermo, setLimpiezaTermo] = useState<Termohigrometro | null>(null);
   const isAdmin = currentUser.rol === 'admin';
 
+  const [todayStatus, setTodayStatus] = useState<Record<string, { manana: boolean; tarde: boolean; locked: boolean }>>({});
   const pendingCount = (() => {
     const today = new Date();
     if (!isWorkday(today, exceptionalDays.map(d => d.fecha))) return 0;
@@ -603,7 +604,6 @@ function Dashboard({ termos, ubicaciones, config, onConfigSave, currentUser, onV
   const [filterSearch, setFilterSearch] = useState('');
   const [filterUbicacion, setFilterUbicacion] = useState<string | null>(null);
   const [filterTipo, setFilterTipo] = useState<'ambiental' | 'refrigeracion' | null>(null);
-  const [todayStatus, setTodayStatus] = useState<Record<string, { manana: boolean; tarde: boolean; locked: boolean }>>({});
 
   useEffect(() => {
     const now = new Date();
